@@ -1,0 +1,15 @@
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Infrastructure/bin/Debug/net8.0/Orchestrator.Infrastructure.deps.json
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Infrastructure/bin/Debug/net8.0/Orchestrator.Infrastructure.dll
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Infrastructure/bin/Debug/net8.0/Orchestrator.Infrastructure.pdb
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Infrastructure/bin/Debug/net8.0/Orchestrator.Application.dll
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Infrastructure/bin/Debug/net8.0/Orchestrator.Domain.dll
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Infrastructure/bin/Debug/net8.0/Orchestrator.Domain.pdb
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Infrastructure/bin/Debug/net8.0/Orchestrator.Application.pdb
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Infrastructure/obj/Debug/net8.0/Orchestrator.Infrastructure.csproj.AssemblyReference.cache
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Infrastructure/obj/Debug/net8.0/Orchestrator.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Infrastructure/obj/Debug/net8.0/Orchestrator.Infrastructure.csproj.CoreCompileInputs.cache
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Infrastructure/obj/Debug/net8.0/Orchestr.6741FECC.Up2Date
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Infrastructure/obj/Debug/net8.0/Orchestrator.Infrastructure.dll
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Infrastructure/obj/Debug/net8.0/refint/Orchestrator.Infrastructure.dll
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Infrastructure/obj/Debug/net8.0/Orchestrator.Infrastructure.pdb
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Infrastructure/obj/Debug/net8.0/ref/Orchestrator.Infrastructure.dll

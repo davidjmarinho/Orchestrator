@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: orchestrator-config
+data:
+  queue-name: orchestrator-queue
+  mongo-host: mongodb

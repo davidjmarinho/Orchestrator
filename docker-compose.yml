@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+
+  mongodb:
+    image: mongo
+    ports:
+      - "27017:27017"
+
+  orchestrator:
+    build: .
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: admin
+      RABBITMQ_PASS: admin123
+      MONGO_HOST: mongodb
+      MONGO_PORT: 27017
+      MONGO_DB: orchestrator
+    depends_on:
+      - rabbitmq
+      - mongodb
+
+  notifications-api:
+    image: notificationapi:latest
+    ports:
+      - "5004:80"
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: admin
+      RABBITMQ_PASS: admin123
+    depends_on:
+      - rabbitmq

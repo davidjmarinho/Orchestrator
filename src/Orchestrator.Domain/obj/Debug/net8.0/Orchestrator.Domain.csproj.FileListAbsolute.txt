@@ -1,0 +1,9 @@
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Domain/bin/Debug/net8.0/Orchestrator.Domain.deps.json
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Domain/bin/Debug/net8.0/Orchestrator.Domain.dll
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Domain/bin/Debug/net8.0/Orchestrator.Domain.pdb
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Domain/obj/Debug/net8.0/Orchestrator.Domain.GeneratedMSBuildEditorConfig.editorconfig
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Domain/obj/Debug/net8.0/Orchestrator.Domain.csproj.CoreCompileInputs.cache
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Domain/obj/Debug/net8.0/Orchestrator.Domain.dll
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Domain/obj/Debug/net8.0/refint/Orchestrator.Domain.dll
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Domain/obj/Debug/net8.0/Orchestrator.Domain.pdb
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Domain/obj/Debug/net8.0/ref/Orchestrator.Domain.dll

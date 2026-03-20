@@ -1,0 +1,13 @@
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/bin/Debug/net8.0/Orchestrator.Application.deps.json
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/bin/Debug/net8.0/Orchestrator.Application.dll
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/bin/Debug/net8.0/Orchestrator.Application.pdb
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/bin/Debug/net8.0/Orchestrator.Domain.dll
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/bin/Debug/net8.0/Orchestrator.Domain.pdb
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/obj/Debug/net8.0/Orchestrator.Application.csproj.AssemblyReference.cache
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/obj/Debug/net8.0/Orchestrator.Application.GeneratedMSBuildEditorConfig.editorconfig
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/obj/Debug/net8.0/Orchestrator.Application.csproj.CoreCompileInputs.cache
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/obj/Debug/net8.0/Orchestr.1A19518B.Up2Date
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/obj/Debug/net8.0/Orchestrator.Application.dll
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/obj/Debug/net8.0/refint/Orchestrator.Application.dll
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/obj/Debug/net8.0/Orchestrator.Application.pdb
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/obj/Debug/net8.0/ref/Orchestrator.Application.dll

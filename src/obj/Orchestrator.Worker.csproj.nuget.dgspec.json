@@ -1,0 +1,297 @@
+{
+  "format": 1,
+  "restore": {
+    "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Worker.csproj": {}
+  },
+  "projects": {
+    "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/Orchestrator.Application.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/Orchestrator.Application.csproj",
+        "projectName": "Orchestrator.Application",
+        "projectPath": "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/Orchestrator.Application.csproj",
+        "packagesPath": "/Users/david/.nuget/packages/",
+        "outputPath": "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/Users/david/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Domain/Orchestrator.Domain.csproj": {
+                "projectPath": "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Domain/Orchestrator.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.100"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.101/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Domain/Orchestrator.Domain.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Domain/Orchestrator.Domain.csproj",
+        "projectName": "Orchestrator.Domain",
+        "projectPath": "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Domain/Orchestrator.Domain.csproj",
+        "packagesPath": "/Users/david/.nuget/packages/",
+        "outputPath": "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Domain/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/Users/david/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.100"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.101/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Infrastructure/Orchestrator.Infrastructure.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Infrastructure/Orchestrator.Infrastructure.csproj",
+        "projectName": "Orchestrator.Infrastructure",
+        "projectPath": "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Infrastructure/Orchestrator.Infrastructure.csproj",
+        "packagesPath": "/Users/david/.nuget/packages/",
+        "outputPath": "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Infrastructure/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/Users/david/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/Orchestrator.Application.csproj": {
+                "projectPath": "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/Orchestrator.Application.csproj"
+              },
+              "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Domain/Orchestrator.Domain.csproj": {
+                "projectPath": "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Domain/Orchestrator.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.100"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Microsoft.Extensions.Hosting": {
+              "target": "Package",
+              "version": "[10.0.5, )"
+            },
+            "MongoDB.Driver": {
+              "target": "Package",
+              "version": "[3.7.1, )"
+            },
+            "RabbitMQ.Client": {
+              "target": "Package",
+              "version": "[6.2.1, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.101/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Worker.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Worker.csproj",
+        "projectName": "Orchestrator.Worker",
+        "projectPath": "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Worker.csproj",
+        "packagesPath": "/Users/david/.nuget/packages/",
+        "outputPath": "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/Users/david/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/Orchestrator.Application.csproj": {
+                "projectPath": "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/Orchestrator.Application.csproj"
+              },
+              "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Domain/Orchestrator.Domain.csproj": {
+                "projectPath": "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Domain/Orchestrator.Domain.csproj"
+              },
+              "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Infrastructure/Orchestrator.Infrastructure.csproj": {
+                "projectPath": "/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Infrastructure/Orchestrator.Infrastructure.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.100"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Microsoft.Extensions.DependencyInjection": {
+              "target": "Package",
+              "version": "[10.0.5, )"
+            },
+            "Microsoft.Extensions.Hosting": {
+              "target": "Package",
+              "version": "[10.0.5, )"
+            },
+            "MongoDB.Driver": {
+              "target": "Package",
+              "version": "[3.7.1, )"
+            },
+            "RabbitMQ.Client": {
+              "target": "Package",
+              "version": "[6.2.1, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.101/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}
