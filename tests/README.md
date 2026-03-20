@@ -175,11 +175,13 @@ kubectl logs -f deployment/orchestrator
 
 # 4. Acessar RabbitMQ Management
 kubectl port-forward svc/rabbitmq 15672:15672
-# Acesse: http://localhost:15672 (admin/admin123)
+# Acesse: http://localhost:15672
+# Use as credenciais do rabbitmq-secret
 
 # 5. Acessar MongoDB
 kubectl port-forward svc/mongodb 27017:27017
-# Conecte com: mongodb://admin:mongo%40123@localhost:27017/orchestrator
+# Use as credenciais do mongodb-secret
+# Connection string: mongodb://<user>:<password>@localhost:27017/orchestrator?authSource=admin
 ```
 
 ### 🛠️ Desenvolvimento Local
@@ -188,13 +190,13 @@ kubectl port-forward svc/mongodb 27017:27017
 # 1. Configurar variáveis de ambiente
 export RABBITMQ_HOST=localhost
 export RABBITMQ_PORT=5672
-export RABBITMQ_USER=admin
-export RABBITMQ_PASS=admin123
+export RABBITMQ_USER=<your_rabbitmq_user>
+export RABBITMQ_PASS=<your_rabbitmq_password>
 export MONGO_HOST=localhost
 export MONGO_PORT=27017
 export MONGO_DB=orchestrator
-export MONGO_USER=admin
-export MONGO_PASS=mongo@123
+export MONGO_USER=<your_mongo_user>
+export MONGO_PASS=<your_mongo_password>
 
 # 2. Executar
 dotnet run --project src/Orchestrator.Worker.csproj
@@ -202,7 +204,241 @@ dotnet run --project src/Orchestrator.Worker.csproj
 
 ---
 
-## 🔌 Integração com Microserviços
+## � Configuração Docker para Microserviços
+
+### 📝 Dockerfile das APIs
+
+Exemplo de Dockerfile para uma API que publica eventos no Orchestrator:
+
+```dockerfile
+# Build stage
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copiar arquivos de projeto e restaurar dependências
+COPY ["YourAPI/YourAPI.csproj", "YourAPI/"]
+RUN dotnet restore "YourAPI/YourAPI.csproj"
+
+# Copiar código fonte e compilar
+COPY . .
+WORKDIR "/src/YourAPI"
+RUN dotnet build "YourAPI.csproj" -c Release -o /app/build
+RUN dotnet publish "YourAPI.csproj" -c Release -o /app/publish
+
+# Runtime stage
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+WORKDIR /app
+COPY --from=build /app/publish .
+
+# Expor porta da API
+EXPOSE 80
+EXPOSE 443
+
+ENTRYPOINT ["dotnet", "YourAPI.dll"]
+```
+
+---
+
+### 🐋 docker-compose.yml
+
+Exemplo de `docker-compose.yml` para uma API que usa o Orchestrator:
+
+```yaml
+version: '3.8'
+
+services:
+  # Sua API (Users, Orders, Payments, etc)
+  users-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: users-api
+    ports:
+      - "5001:80"
+    environment:
+      # Configuração da API
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      
+      # Configuração RabbitMQ (para publicar eventos)
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=${RABBITMQ_USER}
+      - RABBITMQ_PASS=${RABBITMQ_PASS}
+      
+      # Configuração do Banco de Dados da API
+      - DATABASE_HOST=postgres
+      - DATABASE_NAME=usersdb
+      - DATABASE_USER=${DB_USER}
+      - DATABASE_PASS=${DB_PASS}
+    networks:
+      - orchestrator-network
+    depends_on:
+      - rabbitmq
+      - postgres
+    restart: unless-stopped
+
+  # RabbitMQ (compartilhado com Orchestrator)
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # Management UI
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS}
+    networks:
+      - orchestrator-network
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    restart: unless-stopped
+
+  # Banco de dados da API (exemplo com PostgreSQL)
+  postgres:
+    image: postgres:15
+    container_name: users-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=usersdb
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+    networks:
+      - orchestrator-network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # Orchestrator (consome eventos do RabbitMQ)
+  orchestrator:
+    image: davidjmarinho/orchestrator:v3
+    container_name: orchestrator
+    environment:
+      # RabbitMQ
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=${RABBITMQ_USER}
+      - RABBITMQ_PASS=${RABBITMQ_PASS}
+      
+      # MongoDB
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - MONGO_DB=orchestrator
+      - MONGO_USER=${MONGO_USER}
+      - MONGO_PASS=${MONGO_PASS}
+    networks:
+      - orchestrator-network
+    depends_on:
+      - rabbitmq
+      - mongodb
+    restart: unless-stopped
+
+  # MongoDB (banco do Orchestrator)
+  mongodb:
+    image: mongo:4.4
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASS}
+      - MONGO_INITDB_DATABASE=orchestrator
+    networks:
+      - orchestrator-network
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+
+networks:
+  orchestrator-network:
+    driver: bridge
+
+volumes:
+  rabbitmq_data:
+  postgres_data:
+  mongodb_data:
+```
+
+---
+
+### 🔐 Arquivo .env
+
+Crie um arquivo `.env` na raiz do projeto com as credenciais:
+
+```bash
+# RabbitMQ
+RABBITMQ_USER=<your_rabbitmq_user>
+RABBITMQ_PASS=<your_rabbitmq_password>
+
+# MongoDB (Orchestrator)
+MONGO_USER=<your_mongo_user>
+MONGO_PASS=<your_mongo_password>
+
+# Database da API
+DB_USER=<your_db_user>
+DB_PASS=<your_db_password>
+```
+
+> ⚠️ **Importante:** Adicione `.env` ao `.gitignore` para não versionar credenciais!
+
+---
+
+### 🚀 Executando o Ambiente Completo
+
+```bash
+# 1. Criar arquivo .env com as credenciais
+cp .env.example .env
+# Edite o .env com suas credenciais
+
+# 2. Subir todos os serviços
+docker-compose up -d
+
+# 3. Verificar status
+docker-compose ps
+
+# 4. Ver logs da API
+docker-compose logs -f users-api
+
+# 5. Ver logs do Orchestrator
+docker-compose logs -f orchestrator
+
+# 6. Acessar RabbitMQ Management
+# http://localhost:15672
+
+# 7. Parar todos os serviços
+docker-compose down
+
+# 8. Parar e remover volumes (limpar dados)
+docker-compose down -v
+```
+
+---
+
+### 🌐 Comunicação entre Serviços
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  orchestrator-network                       │
+│                                                             │
+│  ┌──────────────┐     ┌──────────────┐     ┌────────────┐ │
+│  │  users-api   │────▶│  RabbitMQ    │◀────│Orchestrator│ │
+│  │  :5001       │     │  :5672       │     │            │ │
+│  └──────┬───────┘     └──────────────┘     └─────┬──────┘ │
+│         │                                         │        │
+│         │                                         │        │
+│  ┌──────▼───────┐                         ┌──────▼──────┐ │
+│  │  PostgreSQL  │                         │   MongoDB   │ │
+│  │  :5432       │                         │   :27017    │ │
+│  └──────────────┘                         └─────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+Todos os containers estão na mesma rede Docker (`orchestrator-network`), permitindo comunicação direta usando os nomes dos serviços.
+
+---
+
+## �🔌 Integração com Microserviços
 
 ### 📦 Instalando o SDK (NuGet)
 
@@ -406,7 +642,8 @@ dotnet test
 kubectl port-forward svc/mongodb 27017:27017
 
 # 2. Conectar (Studio 3T ou MongoDB Compass)
-mongodb://admin:mongo%40123@localhost:27017/orchestrator?authSource=admin
+# Connection string: mongodb://<user>:<password>@localhost:27017/orchestrator?authSource=admin
+# Use as credenciais do mongodb-secret
 
 # 3. Consultar logs
 db.Logs.find().sort({CreatedAt: -1}).limit(10)
@@ -443,7 +680,7 @@ kubectl exec deployment/orchestrator -- ping rabbitmq -c 3
 kubectl get secret rabbitmq-secret -o yaml
 
 # 3. Filas existem?
-curl -u admin:admin123 http://localhost:15672/api/queues
+curl -u <user>:<password> http://localhost:15672/api/queues
 ```
 
 ---
@@ -474,8 +711,8 @@ kubectl logs deployment/orchestrator --tail=50
 # Port-forward RabbitMQ
 kubectl port-forward svc/rabbitmq 15672:15672
 
-# Publicar evento de teste
-curl -u admin:admin123 -X POST \
+# Publicar evento de teste (use as credenciais do rabbitmq-secret)
+curl -u <user>:<password> -X POST \
   http://localhost:15672/api/exchanges/%2F/amq.default/publish \
   -H 'Content-Type: application/json' \
   -d '{
