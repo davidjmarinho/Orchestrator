@@ -134,7 +134,7 @@ public class OrchestratorFlowIntegrationTests : IDisposable
         // Assert
         var logs = await _repository.GetAllAsync();
         Assert.Equal(4, logs.Count); // 2 para order + 2 para payment
-        
+
         // Verificar sequência de eventos
         Assert.Contains(logs, l => l.EventName == "OrderPlacedEvent" && l.Status == "RECEIVED");
         Assert.Contains(logs, l => l.EventName == "OrderPlacedEvent" && l.Status == "PROCESSED");

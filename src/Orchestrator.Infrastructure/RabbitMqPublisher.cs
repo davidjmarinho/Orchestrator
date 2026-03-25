@@ -1,4 +1,5 @@
 using RabbitMQ.Client;
+using System.Linq;
 using System.Text;
 using Orchestrator.Domain;
 using System.Text.Json;
@@ -37,7 +38,13 @@ public class RabbitMqPublisher : IMessageBus
 
     public Task PublishAsync<T>(T message)
     {
-        throw new NotImplementedException();
+        var typeName = typeof(T).Name;
+        // Convert PascalCase event name to kebab-case queue name
+        // e.g., NotificationEvent -> notification-event, PaymentRequestEvent -> payment-request-event
+        var queueName = string.Concat(typeName.Select((c, i) =>
+            i > 0 && char.IsUpper(c) ? $"-{char.ToLower(c)}" : $"{char.ToLower(c)}"
+        ));
+        return PublishAsync(queueName, message!);
     }
 
     public Task SubscribeAsync<T>(string queueName, Func<T, Task> onMessage)

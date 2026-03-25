@@ -70,3 +70,4 @@
 /Users/david/Documents/repos/testes_isolados/Orchestrator/src/obj/Debug/net8.0/Orchestrator.Worker.pdb
 /Users/david/Documents/repos/testes_isolados/Orchestrator/src/obj/Debug/net8.0/Orchestrator.Worker.genruntimeconfig.cache
 /Users/david/Documents/repos/testes_isolados/Orchestrator/src/obj/Debug/net8.0/ref/Orchestrator.Worker.dll
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/obj/Debug/net8.0/Orchestrator.Worker.sourcelink.json

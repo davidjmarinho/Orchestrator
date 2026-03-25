@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: orchestrator
+  namespace: fcg-tech-fase-2
 spec:
   selector:
     app: orchestrator

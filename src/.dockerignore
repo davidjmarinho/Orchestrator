@@ -1,0 +1,6 @@
+**/bin/
+**/obj/
+**/*.Tests/
+**/node_modules/
+**/.git/
+**/Workspace/

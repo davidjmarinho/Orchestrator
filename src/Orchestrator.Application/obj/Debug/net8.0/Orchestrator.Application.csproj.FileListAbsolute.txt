@@ -11,3 +11,4 @@
 /Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/obj/Debug/net8.0/refint/Orchestrator.Application.dll
 /Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/obj/Debug/net8.0/Orchestrator.Application.pdb
 /Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/obj/Debug/net8.0/ref/Orchestrator.Application.dll
+/Users/david/Documents/repos/testes_isolados/Orchestrator/src/Orchestrator.Application/obj/Debug/net8.0/Orchestrator.Application.sourcelink.json

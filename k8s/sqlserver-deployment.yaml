@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sqlserver-secret
+  namespace: fcg-tech-fase-2
+type: Opaque
+data:
+  sa-password: U3FsU2VydmVyQDIwMjQ=  # SqlServer@2024
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sqlserver
+  namespace: fcg-tech-fase-2
+  labels:
+    app: sqlserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sqlserver
+  template:
+    metadata:
+      labels:
+        app: sqlserver
+    spec:
+      containers:
+      - name: sqlserver
+        image: mcr.microsoft.com/azure-sql-edge:latest
+        ports:
+        - containerPort: 1433
+          name: sql
+        env:
+        - name: ACCEPT_EULA
+          value: "Y"
+        - name: MSSQL_SA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: sqlserver-secret
+              key: sa-password
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        volumeMounts:
+        - name: sqlserver-data
+          mountPath: /var/opt/mssql
+      volumes:
+      - name: sqlserver-data
+        emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sqlserver
+  namespace: fcg-tech-fase-2
+spec:
+  type: ClusterIP
+  selector:
+    app: sqlserver
+  ports:
+  - port: 1433
+    targetPort: 1433
+    protocol: TCP
+    name: sql

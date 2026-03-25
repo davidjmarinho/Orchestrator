@@ -1,0 +1,144 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+  namespace: fcg-tech-fase-2
+type: Opaque
+data:
+  username: cG9zdGdyZXM=  # postgres
+  password: cG9zdGdyZXMxMjM=  # postgres123
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: fcg-tech-fase-2
+data:
+  POSTGRES_DB: microservices
+  # Script executado automaticamente na inicialização do PostgreSQL
+  init-databases.sh: |
+    #!/bin/bash
+    set -e
+
+    echo "=== Criando bancos de dados e usuários para os microserviços ==="
+
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+      -- Users API
+      DO \$\$
+      BEGIN
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'fcg') THEN
+          CREATE USER fcg WITH PASSWORD 'fcgpw';
+        END IF;
+      END
+      \$\$;
+      CREATE DATABASE fcg_users_db OWNER fcg;
+      GRANT ALL PRIVILEGES ON DATABASE fcg_users_db TO fcg;
+      ALTER USER fcg WITH SUPERUSER;
+
+      -- Payments API
+      DO \$\$
+      BEGIN
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'payments') THEN
+          CREATE USER payments WITH PASSWORD 'paymentspw';
+        END IF;
+      END
+      \$\$;
+      CREATE DATABASE fcg_payments_db OWNER payments;
+      GRANT ALL PRIVILEGES ON DATABASE fcg_payments_db TO payments;
+      ALTER USER payments WITH SUPERUSER;
+
+      -- Catalog API
+      DO \$\$
+      BEGIN
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'catalog') THEN
+          CREATE USER catalog WITH PASSWORD 'catalogpw';
+        END IF;
+      END
+      \$\$;
+      CREATE DATABASE fcg_catalog_db OWNER catalog;
+      GRANT ALL PRIVILEGES ON DATABASE fcg_catalog_db TO catalog;
+      ALTER USER catalog WITH SUPERUSER;
+    EOSQL
+
+    echo "=== Bancos de dados criados com sucesso! ==="
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: fcg-tech-fase-2
+  labels:
+    app: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: password
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: POSTGRES_DB
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        - name: init-scripts
+          mountPath: /docker-entrypoint-initdb.d
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: postgres-storage
+        emptyDir: {}
+      - name: init-scripts
+        configMap:
+          name: postgres-config
+          items:
+          - key: init-databases.sh
+            path: init-databases.sh
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: fcg-tech-fase-2
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgres
