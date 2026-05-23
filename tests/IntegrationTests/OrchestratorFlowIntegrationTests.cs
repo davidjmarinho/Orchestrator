@@ -13,7 +13,8 @@ public class OrchestratorFlowIntegrationTests : IDisposable
     private readonly MongoDbRunner _runner;
     private readonly MongoDbContext _context;
     private readonly LogRepository _repository;
-    private readonly Mock<IMessageBus> _mockMessageBus;
+    private readonly Mock<IMessageBus>    _mockMessageBus;
+    private readonly Mock<ISqsMessageBus> _mockSqsBus;
 
     public OrchestratorFlowIntegrationTests()
     {
@@ -21,13 +22,14 @@ public class OrchestratorFlowIntegrationTests : IDisposable
         _context = new MongoDbContext(_runner.ConnectionString, "orchestrator-test");
         _repository = new LogRepository(_context);
         _mockMessageBus = new Mock<IMessageBus>();
+        _mockSqsBus     = new Mock<ISqsMessageBus>();
     }
 
     [Fact]
     public async Task UserCreatedFlow_ShouldLogAndPublishNotification()
     {
         // Arrange
-        var handler = new UserCreatedEventHandler(_mockMessageBus.Object, _repository);
+        var handler = new UserCreatedEventHandler(_mockMessageBus.Object, _mockSqsBus.Object, _repository);
         var userEvent = new UserCreatedEvent
         {
             UserId = "user123",
@@ -77,7 +79,7 @@ public class OrchestratorFlowIntegrationTests : IDisposable
     public async Task PaymentProcessedFlow_ShouldLogAndPublishMultipleEvents()
     {
         // Arrange
-        var handler = new PaymentProcessedEventHandler(_mockMessageBus.Object, _repository);
+        var handler = new PaymentProcessedEventHandler(_mockMessageBus.Object, _mockSqsBus.Object, _repository);
         var paymentEvent = new PaymentProcessedEvent
         {
             PaymentId = "payment123",

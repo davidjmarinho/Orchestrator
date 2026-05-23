@@ -1,42 +1,107 @@
 version: '3.8'
 
+# Uso:
+#   docker compose --env-file .env up -d
+#
+# Crie um arquivo .env na raiz com:
+#   LOCALSTACK_AUTH_TOKEN=<seu_token>
+
 services:
   rabbitmq:
     image: rabbitmq:3-management
+    container_name: rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: admin
       RABBITMQ_DEFAULT_PASS: admin123
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - fcg-net
 
   mongodb:
-    image: mongo
+    image: mongo:7
+    container_name: mongodb
     ports:
       - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - fcg-net
+
+  localstack:
+    image: localstack/localstack:latest
+    container_name: localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN}
+      - SERVICES=sqs,lambda
+      - DEFAULT_REGION=us-east-1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      # Lambda container roda na mesma rede — acessa MongoDB pelo nome do serviço
+      - LAMBDA_DOCKER_NETWORK=fcg-net
+      - LAMBDA_DOCKER_FLAGS=--network fcg-net
+      # Nome da imagem Lambda a deployar (build com: bash build-lambda.sh no NotificationsAPI)
+      - LAMBDA_IMAGE_NAME=${LAMBDA_IMAGE_NAME:-notifications-lambda:latest}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - localstack-data:/var/lib/localstack
+      # init-aws.sh é executado automaticamente quando o LocalStack fica pronto
+      - ./localstack:/etc/localstack/init/ready.d
+    healthcheck:
+      test: curl -sf http://localhost:4566/_localstack/health | grep '"sqs"'
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      - fcg-net
 
   orchestrator:
     build: .
+    container_name: orchestrator
     environment:
+      # RabbitMQ
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: admin
       RABBITMQ_PASS: admin123
+      # MongoDB
       MONGO_HOST: mongodb
       MONGO_PORT: 27017
       MONGO_DB: orchestrator
+      # SQS / LocalStack
+      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      SQS_USER_CREATED_QUEUE_URL: http://localstack:4566/000000000000/user-created-queue
+      SQS_PAYMENT_PROCESSED_QUEUE_URL: http://localstack:4566/000000000000/payment-processed-queue
     depends_on:
-      - rabbitmq
-      - mongodb
+      rabbitmq:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    networks:
+      - fcg-net
 
-  notifications-api:
-    image: notificationapi:latest
-    ports:
-      - "5004:80"
-    environment:
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
-      RABBITMQ_USER: admin
-      RABBITMQ_PASS: admin123
-    depends_on:
-      - rabbitmq
+volumes:
+  mongodb-data:
+  localstack-data:
+
+networks:
+  fcg-net:
+    name: fcg-net
+    driver: bridge

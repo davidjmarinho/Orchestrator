@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make lint)",
+      "Bash(make test)",
+      "Bash(make analyse)",
+      "Bash(npx tsc --noEmit *)",
+      "Bash(curl -s http://localhost:4566/_localstack/health *)",
+      "Bash(curl -s http://localhost:4566/_localstack/info *)",
+      "Bash(docker compose ps *)",
+      "Bash(docker compose logs *)"
+    ]
+  }
+}

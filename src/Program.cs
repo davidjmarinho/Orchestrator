@@ -26,6 +26,9 @@ builder.Services.AddScoped<ILogRepository, LogRepository>();
 builder.Services.AddSingleton<RabbitMqConnectionFactory>();
 builder.Services.AddSingleton<IMessageBus, RabbitMqPublisher>();
 
+// SQS (LocalStack ou AWS real — controlado por AWS_ENDPOINT_URL)
+builder.Services.AddSingleton<ISqsMessageBus, SqsPublisher>();
+
 // Event Handlers
 builder.Services.AddScoped<IEventHandler<UserCreatedEvent>, UserCreatedEventHandler>();
 builder.Services.AddScoped<IEventHandler<OrderPlacedEvent>, OrderPlacedEventHandler>();

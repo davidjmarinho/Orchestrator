@@ -8,15 +8,20 @@ namespace Orchestrator.UnitTests.Application;
 
 public class PaymentProcessedEventHandlerTests
 {
-    private readonly Mock<IMessageBus> _mockMessageBus;
+    private readonly Mock<IMessageBus>    _mockMessageBus;
+    private readonly Mock<ISqsMessageBus> _mockSqsBus;
     private readonly Mock<ILogRepository> _mockLogRepository;
     private readonly PaymentProcessedEventHandler _handler;
 
     public PaymentProcessedEventHandlerTests()
     {
-        _mockMessageBus = new Mock<IMessageBus>();
+        _mockMessageBus    = new Mock<IMessageBus>();
+        _mockSqsBus        = new Mock<ISqsMessageBus>();
         _mockLogRepository = new Mock<ILogRepository>();
-        _handler = new PaymentProcessedEventHandler(_mockMessageBus.Object, _mockLogRepository.Object);
+        _handler = new PaymentProcessedEventHandler(
+            _mockMessageBus.Object,
+            _mockSqsBus.Object,
+            _mockLogRepository.Object);
     }
 
     [Fact]
