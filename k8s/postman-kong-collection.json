@@ -1,0 +1,407 @@
+{
+  "info": {
+    "_postman_id": "f3a92b10-1234-4abc-8def-fiapfase3kong",
+    "name": "Kong API Gateway — FIAP Fase 3",
+    "description": "Testa as políticas do Kong configuradas via kong-setup.sh.\n\nPré-requisito:\n  kubectl port-forward svc/kong-proxy 9080:80 -n fcg-tech-fase-2\n\nO JWT é gerado automaticamente no Pre-request Script da coleção.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:9080", "type": "string" },
+    { "key": "jwt_token", "value": "GERADO_AUTOMATICAMENTE", "type": "string" },
+    { "key": "email_test", "value": "teste@email.com", "type": "string" },
+    { "key": "password_test", "value": "senha123", "type": "string" }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Gera JWT HS256 com iss=UsersAPI (compatível com kong-setup.sh)",
+          "function base64url(str) {",
+          "    return btoa(unescape(encodeURIComponent(str)))",
+          "        .replace(/=/g,'').replace(/\\+/g,'-').replace(/\\//g,'_');",
+          "}",
+          "const now = Math.floor(Date.now() / 1000);",
+          "const header  = base64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));",
+          "const payload = base64url(JSON.stringify({",
+          "    iss: 'UsersAPI',",
+          "    sub: 'test-user',",
+          "    iat: now,",
+          "    exp: now + 86400",
+          "}));",
+          "const sigInput = header + '.' + payload;",
+          "const secret   = 'ChaveSuperSecretaCom32Caracteres!';",
+          "const sig = CryptoJS.HmacSHA256(sigInput, secret)",
+          "    .toString(CryptoJS.enc.Base64)",
+          "    .replace(/=/g,'').replace(/\\+/g,'-').replace(/\\//g,'_');",
+          "const jwt = sigInput + '.' + sig;",
+          "pm.collectionVariables.set('jwt_token', jwt);"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "🔓 Rotas Públicas (sem JWT)",
+      "item": [
+        {
+          "name": "POST Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Usuário Teste\",\n  \"email\": \"{{email_test}}\",\n  \"password\": \"{{password_test}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/users/register", "host": ["{{base_url}}"], "path": ["api","users","register"] },
+            "description": "Rota pública — Kong não exige JWT.\nEsperado: 200/201 (backend OK) ou 502 (backend offline, mas Kong aceitou)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong não retornou 401 (rota pública)', function() {",
+                  "    pm.expect(pm.response.code).to.not.equal(401);",
+                  "});",
+                  "pm.test('Kong respondeu (não timeout)', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200,201,400,404,500,502,503]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email_test}}\",\n  \"password\": \"{{password_test}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/users/login", "host": ["{{base_url}}"], "path": ["api","users","login"] },
+            "description": "Rota pública — Kong não exige JWT."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong não retornou 401 (rota pública)', function() {",
+                  "    pm.expect(pm.response.code).to.not.equal(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🔒 Rotas Protegidas (JWT válido)",
+      "item": [
+        {
+          "name": "GET /api/users  ← JWT válido",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }],
+            "url": { "raw": "{{base_url}}/api/users", "host": ["{{base_url}}"], "path": ["api","users"] },
+            "description": "Kong valida o JWT e roteia.\n500\/502 = Kong aceitou mas backend está offline (Worker sem HTTP)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong aceitou o JWT (não 401)', function() {",
+                  "    pm.expect(pm.response.code).to.not.equal(401);",
+                  "});",
+                  "pm.test('Status válido recebido', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200,201,400,404,500,502,503]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/users  ← JWT válido",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Admin User\",\n  \"email\": \"admin@email.com\",\n  \"password\": \"admin123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/users", "host": ["{{base_url}}"], "path": ["api","users"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong aceitou o JWT (não 401)', function() {",
+                  "    pm.expect(pm.response.code).to.not.equal(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/catalog  ← JWT válido",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }],
+            "url": { "raw": "{{base_url}}/api/catalog", "host": ["{{base_url}}"], "path": ["api","catalog"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong aceitou o JWT (não 401)', function() {",
+                  "    pm.expect(pm.response.code).to.not.equal(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/catalog  ← JWT válido",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Produto Teste\",\n  \"description\": \"Descrição do produto\",\n  \"price\": 99.90,\n  \"category\": \"Lanche\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/catalog", "host": ["{{base_url}}"], "path": ["api","catalog"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong aceitou o JWT (não 401)', function() {",
+                  "    pm.expect(pm.response.code).to.not.equal(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/products  ← JWT válido",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }],
+            "url": { "raw": "{{base_url}}/api/products", "host": ["{{base_url}}"], "path": ["api","products"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong aceitou o JWT (não 401)', function() {",
+                  "    pm.expect(pm.response.code).to.not.equal(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "❌ Verificação de Auth (deve retornar 401)",
+      "item": [
+        {
+          "name": "GET /api/users — SEM token → 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/users", "host": ["{{base_url}}"], "path": ["api","users"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong bloqueou sem token — 401', function() {",
+                  "    pm.expect(pm.response.code).to.equal(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/catalog — SEM token → 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/catalog", "host": ["{{base_url}}"], "path": ["api","catalog"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong bloqueou sem token — 401', function() {",
+                  "    pm.expect(pm.response.code).to.equal(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/products — SEM token → 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/products", "host": ["{{base_url}}"], "path": ["api","products"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong bloqueou sem token — 401', function() {",
+                  "    pm.expect(pm.response.code).to.equal(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/users — token INVÁLIDO → 401",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJGQUtFIn0.assinatura_invalida_aqui" }],
+            "url": { "raw": "{{base_url}}/api/users", "host": ["{{base_url}}"], "path": ["api","users"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong rejeitou token inválido — 401', function() {",
+                  "    pm.expect(pm.response.code).to.equal(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/catalog — token ISS errado → 401",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJPVVRSQV9BUEkiLCJzdWIiOiJ0ZXN0In0.XqkKmpvGPp9lFCv_7tPqjfPYvIiL1dvOfM2naqVJJGM" }],
+            "url": { "raw": "{{base_url}}/api/catalog", "host": ["{{base_url}}"], "path": ["api","catalog"] },
+            "description": "Token com iss=OUTRA_API (não UsersAPI) — Kong deve rejeitar."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong rejeitou iss incorreto — 401', function() {",
+                  "    pm.expect(pm.response.code).to.equal(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🌐 CORS (preflight OPTIONS)",
+      "item": [
+        {
+          "name": "OPTIONS /api/users — preflight",
+          "request": {
+            "method": "OPTIONS",
+            "header": [
+              { "key": "Origin", "value": "http://meuapp.com" },
+              { "key": "Access-Control-Request-Method", "value": "POST" },
+              { "key": "Access-Control-Request-Headers", "value": "Authorization,Content-Type" }
+            ],
+            "url": { "raw": "{{base_url}}/api/users", "host": ["{{base_url}}"], "path": ["api","users"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('CORS preflight aceito (200 ou 204)', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});",
+                  "pm.test('Header Access-Control-Allow-Origin presente', function() {",
+                  "    pm.expect(pm.response.headers.get('Access-Control-Allow-Origin')).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "OPTIONS /api/catalog — preflight",
+          "request": {
+            "method": "OPTIONS",
+            "header": [
+              { "key": "Origin", "value": "http://meuapp.com" },
+              { "key": "Access-Control-Request-Method", "value": "GET" },
+              { "key": "Access-Control-Request-Headers", "value": "Authorization" }
+            ],
+            "url": { "raw": "{{base_url}}/api/catalog", "host": ["{{base_url}}"], "path": ["api","catalog"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('CORS preflight aceito (200 ou 204)', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
