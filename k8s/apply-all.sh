@@ -38,32 +38,37 @@ echo "🚀 Iniciando deploy..."
 echo ""
 
 # Criar namespace se não existir
-echo "📦 [1/7] Criando namespace..."
+echo "📦 [1/8] Criando namespace..."
 $KUBECTL create namespace $NAMESPACE --dry-run=client -o yaml | $KUBECTL apply -f -
 echo "✅ Namespace criado/atualizado"
 echo ""
 
 # Deploy de Secrets e ConfigMaps
-echo "🔐 [2/7] Aplicando Secrets e ConfigMaps..."
+echo "🔐 [2/8] Aplicando Secrets e ConfigMaps..."
 $KUBECTL apply -f orchestrator-secret.yaml
 $KUBECTL apply -f mongodb-secret.yaml
+$KUBECTL apply -f kong-secret.yaml
 $KUBECTL apply -f orchestrator-configmap.yaml
 $KUBECTL apply -f postgres-deployment.yaml  # Contém secret e configmap do Postgres
 echo "✅ Secrets e ConfigMaps aplicados"
 echo ""
 
 # Deploy de Databases
-echo "🗄️  [3/7] Deployando bancos de dados..."
+echo "🗄️  [3/8] Deployando bancos de dados..."
 $KUBECTL apply -f mongodb-deployment.yaml
 $KUBECTL apply -f postgres-deployment.yaml
+$KUBECTL apply -f sqlserver-deployment.yaml
+$KUBECTL apply -f kong-database-deployment.yaml
 echo "⏳ Aguardando bancos de dados ficarem prontos..."
 $KUBECTL wait --for=condition=ready pod -l app=mongodb -n $NAMESPACE --timeout=120s
 $KUBECTL wait --for=condition=ready pod -l app=postgres -n $NAMESPACE --timeout=120s
+$KUBECTL wait --for=condition=ready pod -l app=sqlserver -n $NAMESPACE --timeout=180s
+$KUBECTL wait --for=condition=ready pod -l app=kong-database -n $NAMESPACE --timeout=120s
 echo "✅ Bancos de dados prontos"
 echo ""
 
 # Deploy de Message Broker
-echo "📨 [4/7] Deployando RabbitMQ..."
+echo "📨 [4/8] Deployando RabbitMQ..."
 $KUBECTL apply -f rabbitmq-deployment.yaml
 echo "⏳ Aguardando RabbitMQ ficar pronto..."
 $KUBECTL wait --for=condition=ready pod -l app=rabbitmq -n $NAMESPACE --timeout=120s
@@ -71,7 +76,7 @@ echo "✅ RabbitMQ pronto"
 echo ""
 
 # Deploy do Orchestrator
-echo "🎯 [5/7] Deployando Orchestrator..."
+echo "🎯 [5/8] Deployando Orchestrator..."
 $KUBECTL apply -f orchestrator-deployment.yaml
 $KUBECTL apply -f orchestrator-service.yaml
 echo "⏳ Aguardando Orchestrator ficar pronto..."
@@ -80,9 +85,9 @@ echo "✅ Orchestrator pronto"
 echo ""
 
 # Deploy das APIs
-echo "🔌 [6/7] Deployando microserviços..."
+echo "🔌 [6/8] Deployando microserviços..."
 $KUBECTL apply -f users-api-deployment.yaml
-$KUBECTL apply -f orders-api-deployment.yaml
+# $KUBECTL apply -f orders-api-deployment.yaml
 $KUBECTL apply -f payments-api-deployment.yaml
 $KUBECTL apply -f notification-api-deployment.yaml
 $KUBECTL apply -f catalog-api-deployment.yaml
@@ -91,8 +96,20 @@ sleep 10  # Dar tempo para os pods iniciarem
 echo "✅ Microserviços deployados"
 echo ""
 
+# Deploy do Kong API Gateway + Konga
+echo "🌐 [7/8] Deployando Kong API Gateway e Konga..."
+$KUBECTL apply -f kong-database-deployment.yaml
+$KUBECTL apply -f kong-deployment.yaml
+$KUBECTL apply -f konga-deployment.yaml
+echo "⏳ Aguardando Kong ficar pronto..."
+$KUBECTL wait --for=condition=ready pod -l app=kong -n $NAMESPACE --timeout=120s
+echo "⏳ Aguardando Konga ficar pronto..."
+$KUBECTL wait --for=condition=ready pod -l app=konga -n $NAMESPACE --timeout=120s
+echo "✅ Kong e Konga prontos"
+echo ""
+
 # Verificar status final
-echo "🔍 [7/7] Verificando status dos pods..."
+echo "🔍 [8/8] Verificando status dos pods..."
 echo ""
 $KUBECTL get pods -n $NAMESPACE
 echo ""
@@ -123,9 +140,22 @@ echo ""
 echo "  # Acessar MongoDB"
 echo "  kubectl port-forward svc/mongodb 27017:27017 -n $NAMESPACE"
 echo ""
-echo "  # Testar Users API"
-echo "  kubectl port-forward svc/users-api 8001:80 -n $NAMESPACE"
+echo "  # Acessar Kong Proxy (API Gateway - ponto de entrada externo)"
+echo "  kubectl port-forward svc/kong-proxy 8080:80 -n $NAMESPACE"
+echo "  # Abrir: http://localhost:8080"
+echo ""
+echo "  # Acessar Kong Admin API"
+echo "  kubectl port-forward svc/kong-admin 8001:8001 -n $NAMESPACE"
 echo "  # Abrir: http://localhost:8001"
+echo ""
+echo "  # Acessar Konga (GUI para gerenciar Kong)"
+echo "  kubectl port-forward svc/konga 1337:1337 -n $NAMESPACE"
+echo "  # Abrir: http://localhost:1337"
+echo "  # Configurar conexão: Nome: Kong Local | Kong Admin URL: http://kong-admin:8001"
+echo ""
+echo "  # Testar Users API (acesso direto, sem gateway)"
+echo "  kubectl port-forward svc/users-api 8082:80 -n $NAMESPACE"
+echo "  # Abrir: http://localhost:8082"
 echo ""
 echo "  # Deletar tudo"
 echo "  kubectl delete namespace $NAMESPACE"
