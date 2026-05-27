@@ -38,37 +38,40 @@ echo "🚀 Iniciando deploy..."
 echo ""
 
 # Criar namespace se não existir
-echo "📦 [1/8] Criando namespace..."
+echo "📦 [1/9] Criando namespace..."
 $KUBECTL create namespace $NAMESPACE --dry-run=client -o yaml | $KUBECTL apply -f -
 echo "✅ Namespace criado/atualizado"
 echo ""
 
 # Deploy de Secrets e ConfigMaps
-echo "🔐 [2/8] Aplicando Secrets e ConfigMaps..."
+echo "🔐 [2/9] Aplicando Secrets e ConfigMaps..."
 $KUBECTL apply -f orchestrator-secret.yaml
 $KUBECTL apply -f mongodb-secret.yaml
 $KUBECTL apply -f kong-secret.yaml
+$KUBECTL apply -f redis-secret.yaml
 $KUBECTL apply -f orchestrator-configmap.yaml
 $KUBECTL apply -f postgres-deployment.yaml  # Contém secret e configmap do Postgres
 echo "✅ Secrets e ConfigMaps aplicados"
 echo ""
 
-# Deploy de Databases
-echo "🗄️  [3/8] Deployando bancos de dados..."
+# Deploy de Databases e Cache
+echo "🗄️  [3/9] Deployando bancos de dados e cache..."
 $KUBECTL apply -f mongodb-deployment.yaml
 $KUBECTL apply -f postgres-deployment.yaml
 $KUBECTL apply -f sqlserver-deployment.yaml
 $KUBECTL apply -f kong-database-deployment.yaml
-echo "⏳ Aguardando bancos de dados ficarem prontos..."
+$KUBECTL apply -f redis-deployment.yaml
+echo "⏳ Aguardando bancos de dados e cache ficarem prontos..."
 $KUBECTL wait --for=condition=ready pod -l app=mongodb -n $NAMESPACE --timeout=120s
 $KUBECTL wait --for=condition=ready pod -l app=postgres -n $NAMESPACE --timeout=120s
 $KUBECTL wait --for=condition=ready pod -l app=sqlserver -n $NAMESPACE --timeout=180s
 $KUBECTL wait --for=condition=ready pod -l app=kong-database -n $NAMESPACE --timeout=120s
-echo "✅ Bancos de dados prontos"
+$KUBECTL wait --for=condition=ready pod -l app=redis -n $NAMESPACE --timeout=60s
+echo "✅ Bancos de dados e cache prontos"
 echo ""
 
 # Deploy de Message Broker
-echo "📨 [4/8] Deployando RabbitMQ..."
+echo "📨 [4/9] Deployando RabbitMQ..."
 $KUBECTL apply -f rabbitmq-deployment.yaml
 echo "⏳ Aguardando RabbitMQ ficar pronto..."
 $KUBECTL wait --for=condition=ready pod -l app=rabbitmq -n $NAMESPACE --timeout=120s
@@ -76,7 +79,7 @@ echo "✅ RabbitMQ pronto"
 echo ""
 
 # Deploy do Orchestrator
-echo "🎯 [5/8] Deployando Orchestrator..."
+echo "🎯 [5/9] Deployando Orchestrator..."
 $KUBECTL apply -f orchestrator-deployment.yaml
 $KUBECTL apply -f orchestrator-service.yaml
 echo "⏳ Aguardando Orchestrator ficar pronto..."
@@ -85,7 +88,7 @@ echo "✅ Orchestrator pronto"
 echo ""
 
 # Deploy das APIs
-echo "🔌 [6/8] Deployando microserviços..."
+echo "🔌 [6/9] Deployando microserviços..."
 $KUBECTL apply -f users-api-deployment.yaml
 # $KUBECTL apply -f orders-api-deployment.yaml
 $KUBECTL apply -f payments-api-deployment.yaml
@@ -97,7 +100,7 @@ echo "✅ Microserviços deployados"
 echo ""
 
 # Deploy do Kong API Gateway + Konga
-echo "🌐 [7/8] Deployando Kong API Gateway e Konga..."
+echo "🌐 [7/9] Deployando Kong API Gateway e Konga..."
 $KUBECTL apply -f kong-database-deployment.yaml
 $KUBECTL apply -f kong-deployment.yaml
 $KUBECTL apply -f konga-deployment.yaml
@@ -108,8 +111,19 @@ $KUBECTL wait --for=condition=ready pod -l app=konga -n $NAMESPACE --timeout=120
 echo "✅ Kong e Konga prontos"
 echo ""
 
+# Deploy do Prometheus e Grafana (Observabilidade)
+echo "📊 [8/9] Deployando Prometheus e Grafana..."
+$KUBECTL apply -f prometheus-deployment.yaml
+$KUBECTL apply -f grafana-deployment.yaml
+echo "⏳ Aguardando Prometheus ficar pronto..."
+$KUBECTL wait --for=condition=ready pod -l app=prometheus -n $NAMESPACE --timeout=120s
+echo "⏳ Aguardando Grafana ficar pronto..."
+$KUBECTL wait --for=condition=ready pod -l app=grafana -n $NAMESPACE --timeout=120s
+echo "✅ Prometheus e Grafana prontos"
+echo ""
+
 # Verificar status final
-echo "🔍 [8/8] Verificando status dos pods..."
+echo "🔍 [9/9] Verificando status dos pods..."
 echo ""
 $KUBECTL get pods -n $NAMESPACE
 echo ""
@@ -159,5 +173,13 @@ echo "  # Abrir: http://localhost:8082"
 echo ""
 echo "  # Deletar tudo"
 echo "  kubectl delete namespace $NAMESPACE"
+echo ""
+echo "  # Acessar Prometheus"
+echo "  kubectl port-forward svc/prometheus 9090:9090 -n $NAMESPACE"
+echo "  # Abrir: http://localhost:9090"
+echo ""
+echo "  # Acessar Grafana"
+echo "  kubectl port-forward svc/grafana 3000:3000 -n $NAMESPACE"
+echo "  # Abrir: http://localhost:3000  (admin/admin)"
 echo ""
 echo "=========================================="

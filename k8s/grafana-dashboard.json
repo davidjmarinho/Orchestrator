@@ -1,0 +1,360 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "fcg-tech-overview",
+    "title": "FCG Tech - Microservices Overview",
+    "tags": ["fcg-tech", "microservices", "prometheus"],
+    "timezone": "browser",
+    "refresh": "10s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "APIs Status (UP/DOWN)",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 },
+        "targets": [
+          {
+            "expr": "up",
+            "legendFormat": "{{job}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": null, "color": "red" },
+                { "value": 1, "color": "green" }
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "auto",
+          "reduceOptions": { "calcs": ["lastNotNull"] }
+        },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      },
+      {
+        "id": 2,
+        "title": "Request Rate (req/s) por API",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+        "targets": [
+          {
+            "expr": "sum by (job) (rate(http_requests_received_total[5m]))",
+            "legendFormat": "{{job}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15, "pointSize": 5 },
+            "unit": "reqps"
+          }
+        },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      },
+      {
+        "id": 3,
+        "title": "Request Rate por Endpoint (UsersAPI)",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+        "targets": [
+          {
+            "expr": "sum by (endpoint, method, code) (rate(http_requests_received_total{job=\"UsersAPI\", endpoint!=\"/health\"}[5m]))",
+            "legendFormat": "{{method}} {{endpoint}} [{{code}}]",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": { "drawStyle": "bars", "lineWidth": 1, "fillOpacity": 50 },
+            "unit": "reqps"
+          }
+        },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      },
+      {
+        "id": 4,
+        "title": "Total Requests por Endpoint",
+        "type": "table",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+        "targets": [
+          {
+            "expr": "http_requests_received_total{job=\"UsersAPI\", endpoint!=\"/health\"}",
+            "legendFormat": "{{method}} {{endpoint}} [{{code}}]",
+            "refId": "A",
+            "instant": true,
+            "format": "table"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": { "Time": true, "__name__": true, "instance": true, "exported_app": true, "app": true },
+              "renameByName": { "job": "API", "method": "Método", "endpoint": "Endpoint", "code": "Status", "Value": "Total" }
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {},
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "Status" },
+              "properties": [
+                {
+                  "id": "custom.cellOptions",
+                  "value": { "type": "color-text" }
+                },
+                {
+                  "id": "mappings",
+                  "value": [
+                    { "type": "range", "options": { "from": 200, "to": 299, "result": { "color": "green" } } },
+                    { "type": "range", "options": { "from": 400, "to": 499, "result": { "color": "orange" } } },
+                    { "type": "range", "options": { "from": 500, "to": 599, "result": { "color": "red" } } }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      },
+      {
+        "id": 5,
+        "title": "Latência P95",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum by (le, job) (rate(http_request_duration_seconds_bucket[5m])))",
+            "legendFormat": "P95 {{job}}",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.50, sum by (le, job) (rate(http_request_duration_seconds_bucket[5m])))",
+            "legendFormat": "P50 {{job}}",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 },
+            "unit": "s"
+          }
+        },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      },
+      {
+        "id": 6,
+        "title": "Cache Hit Rate (%)",
+        "type": "gauge",
+        "gridPos": { "h": 6, "w": 6, "x": 0, "y": 20 },
+        "targets": [
+          {
+            "expr": "sum(cache_hits_total) / (sum(cache_hits_total) + sum(cache_misses_total)) * 100",
+            "legendFormat": "Hit Rate",
+            "refId": "A",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": null, "color": "red" },
+                { "value": 50, "color": "orange" },
+                { "value": 80, "color": "green" }
+              ]
+            }
+          }
+        },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      },
+      {
+        "id": 7,
+        "title": "Cache Hits vs Misses",
+        "type": "timeseries",
+        "gridPos": { "h": 6, "w": 6, "x": 6, "y": 20 },
+        "targets": [
+          {
+            "expr": "sum(rate(cache_hits_total[5m]))",
+            "legendFormat": "Hits/s",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(rate(cache_misses_total[5m]))",
+            "legendFormat": "Misses/s",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": { "drawStyle": "bars", "lineWidth": 1, "fillOpacity": 60 },
+            "unit": "ops"
+          },
+          "overrides": [
+            { "matcher": { "id": "byName", "options": "Hits/s" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] },
+            { "matcher": { "id": "byName", "options": "Misses/s" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] }
+          ]
+        },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      },
+      {
+        "id": 8,
+        "title": "Usuários Registrados",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 4, "x": 12, "y": 20 },
+        "targets": [
+          {
+            "expr": "users_registered_total",
+            "legendFormat": "Total",
+            "refId": "A",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "fixed", "fixedColor": "blue" },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [{ "value": null, "color": "blue" }]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area",
+          "reduceOptions": { "calcs": ["lastNotNull"] }
+        },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      },
+      {
+        "id": 9,
+        "title": "Cache Hits Total",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 4, "x": 16, "y": 20 },
+        "targets": [
+          {
+            "expr": "sum(cache_hits_total)",
+            "legendFormat": "Hits",
+            "refId": "A",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "fixed", "fixedColor": "green" },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [{ "value": null, "color": "green" }]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area",
+          "reduceOptions": { "calcs": ["lastNotNull"] }
+        },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      },
+      {
+        "id": 10,
+        "title": "Cache Misses Total",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 4, "x": 20, "y": 20 },
+        "targets": [
+          {
+            "expr": "sum(cache_misses_total)",
+            "legendFormat": "Misses",
+            "refId": "A",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "fixed", "fixedColor": "red" },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [{ "value": null, "color": "red" }]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area",
+          "reduceOptions": { "calcs": ["lastNotNull"] }
+        },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      },
+      {
+        "id": 11,
+        "title": "Requests In-Progress",
+        "type": "timeseries",
+        "gridPos": { "h": 6, "w": 12, "x": 0, "y": 26 },
+        "targets": [
+          {
+            "expr": "sum by (job) (http_requests_in_progress)",
+            "legendFormat": "{{job}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 20 }
+          }
+        },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      },
+      {
+        "id": 12,
+        "title": "Taxa de Erros (4xx + 5xx)",
+        "type": "timeseries",
+        "gridPos": { "h": 6, "w": 12, "x": 12, "y": 26 },
+        "targets": [
+          {
+            "expr": "sum by (job) (rate(http_requests_received_total{code=~\"4..|5..\"}[5m]))",
+            "legendFormat": "{{job}} errors/s",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 30 },
+            "unit": "reqps",
+            "color": { "mode": "palette-classic" }
+          }
+        },
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "DS_PROMETHEUS",
+          "type": "datasource",
+          "query": "prometheus",
+          "current": { "text": "Prometheus", "value": "Prometheus" }
+        }
+      ]
+    },
+    "schemaVersion": 39
+  },
+  "overwrite": true
+}

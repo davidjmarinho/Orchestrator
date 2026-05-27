@@ -5,7 +5,7 @@
 #═══════════════════════════════════════════════════════════════
 
 USERS_API="http://localhost:8080"
-CATALOG_API="http://localhost:8082"
+CATALOG_API="http://localhost:8083"
 NS="fcg-tech-fase-2"
 
 GREEN='\033[0;32m'
@@ -21,9 +21,9 @@ step() { echo -e "\n${YELLOW}━━━━━━━━━━━━━━━━━
 
 # ─── Verificar/iniciar port-forwards ─────────────────────────────
 check_port_forward() {
-    local svc=$1 port=$2
+    local svc=$1 port=$2 target_port=${3:-80}
     if ! lsof -i :"$port" -sTCP:LISTEN &>/dev/null; then
-        kubectl port-forward svc/$svc ${port}:80 -n ${NS} &>/dev/null &
+        kubectl port-forward svc/$svc ${port}:${target_port} -n ${NS} &>/dev/null &
         sleep 1
     fi
 }
@@ -35,7 +35,8 @@ echo "════════════════════════�
 
 # Garantir port-forwards
 check_port_forward "users-api" 8080
-check_port_forward "catalog-api" 8082
+check_port_forward "catalog-api" 8083
+check_port_forward "mongodb" 27017 27017
 sleep 1
 
 # ─── PASSO 1: Registrar Usuário ──────────────────────────────────
@@ -89,13 +90,13 @@ fi
 
 # ─── PASSO 3: Criar jogo no catálogo ─────────────────────────────
 step "PASSO 3: 🎮 Cadastrar jogo no catálogo (Catalog API)"
-CREATE_GAME=$(curl -s -w "\n%{http_code}" -X POST "${CATALOG_API}/games" \
+CREATE_GAME=$(curl -s -w "\n%{http_code}" -X POST "${CATALOG_API}/api/catalog/games" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer ${TOKEN}" \
-  -d '{"title":"Elden Ring","priceCents":24990,"currency":"BRL"}' 2>/dev/null)
+  -d '{"name":"Elden Ring","description":"Action RPG by FromSoftware","price":249.90,"category":"RPG"}' 2>/dev/null)
 GAME_BODY=$(echo "$CREATE_GAME" | sed '$d')
 GAME_CODE=$(echo "$CREATE_GAME" | tail -1)
-info "POST /games {title: Elden Ring, priceCents: 24990, currency: BRL}"
+info "POST /api/catalog/games {name: Elden Ring, price: 249.90, category: RPG}"
 if [ "$GAME_CODE" = "200" ] || [ "$GAME_CODE" = "201" ]; then
   pass "Jogo cadastrado! (HTTP ${GAME_CODE})"
   echo -e "  📦 ${GAME_BODY}"
@@ -111,11 +112,11 @@ fi
 
 # ─── PASSO 4: Listar catálogo ────────────────────────────────────
 step "PASSO 4: 📋 Listar jogos no catálogo (Catalog API)"
-LIST_GAMES=$(curl -s -w "\n%{http_code}" "${CATALOG_API}/games" \
+LIST_GAMES=$(curl -s -w "\n%{http_code}" "${CATALOG_API}/api/catalog/games" \
   -H "Authorization: Bearer ${TOKEN}" 2>/dev/null)
 LIST_BODY=$(echo "$LIST_GAMES" | sed '$d')
 LIST_CODE=$(echo "$LIST_GAMES" | tail -1)
-info "GET /games"
+info "GET /api/catalog/games"
 if [ "$LIST_CODE" = "200" ]; then
   pass "Catálogo listado! (HTTP ${LIST_CODE})"
   echo -e "  📦 ${LIST_BODY}"
@@ -128,54 +129,15 @@ else
   echo -e "  📦 ${LIST_BODY}"
 fi
 
-# ─── PASSO 5: Fazer pedido (PlaceOrder) ──────────────────────────
-step "PASSO 5: 🛒 Fazer pedido / comprar jogo (Catalog API → OrderPlaced event)"
-if [ -n "$GAME_ID" ] && [ "$GAME_ID" != "" ]; then
-  ORDER=$(curl -s -w "\n%{http_code}" -X POST "${CATALOG_API}/orders" \
-    -H "Content-Type: application/json" \
-    -H "Authorization: Bearer ${TOKEN}" \
-    -d "{\"gameId\":\"${GAME_ID}\"}" 2>/dev/null)
-  ORDER_BODY=$(echo "$ORDER" | sed '$d')
-  ORDER_CODE=$(echo "$ORDER" | tail -1)
-  info "POST /orders {gameId: ${GAME_ID}}"
-  if [ "$ORDER_CODE" = "200" ] || [ "$ORDER_CODE" = "201" ] || [ "$ORDER_CODE" = "202" ]; then
-    pass "Pedido realizado! (HTTP ${ORDER_CODE}) → Publica OrderPlaced no RabbitMQ"
-    echo -e "  📦 ${ORDER_BODY}"
-  else
-    fail "Falha no pedido (HTTP ${ORDER_CODE})"
-    echo -e "  📦 ${ORDER_BODY}"
-  fi
-else
-  fail "Sem Game ID para fazer pedido"
-fi
-
-# ─── PASSO 6: Verificar biblioteca ───────────────────────────────
-step "PASSO 6: 📚 Verificar biblioteca do usuário (Catalog API)"
-sleep 2
-LIBRARY=$(curl -s -w "\n%{http_code}" "${CATALOG_API}/library" \
-  -H "Authorization: Bearer ${TOKEN}" 2>/dev/null)
-LIB_BODY=$(echo "$LIBRARY" | sed '$d')
-LIB_CODE=$(echo "$LIBRARY" | tail -1)
-info "GET /library"
-if [ "$LIB_CODE" = "200" ]; then
-  pass "Biblioteca obtida! (HTTP ${LIB_CODE})"
-  echo -e "  📦 ${LIB_BODY}"
-else
-  fail "Falha ao obter biblioteca (HTTP ${LIB_CODE})"
-  echo -e "  📦 ${LIB_BODY}"
-fi
-
-# ─── PASSO 7: Aguardar processamento de eventos ──────────────────
-step "PASSO 7: ⏳ Aguardando propagação de eventos via RabbitMQ (8s)"
+# ─── PASSO 5: Aguardar processamento de eventos ──────────────────
+step "PASSO 5: ⏳ Aguardando propagação de eventos via RabbitMQ (8s)"
 info "Fluxo esperado de eventos:"
 info "  1. UserCreated → RabbitMQ → Orchestrator (log) + Notification API (email)"
-info "  2. OrderPlaced → RabbitMQ → Orchestrator (log) + Payments API (cobrança)"
-info "  3. PaymentProcessed → RabbitMQ → Orchestrator (log) + Notification API + Catalog API"
 sleep 8
 pass "Tempo de propagação concluído"
 
-# ─── PASSO 8: Logs dos microserviços ─────────────────────────────
-step "PASSO 8: 📜 Logs dos microserviços (Kubernetes)"
+# ─── PASSO 6: Logs dos microserviços ─────────────────────────────
+step "PASSO 6: 📜 Logs dos microserviços (Kubernetes)"
 
 echo ""
 echo -e "${CYAN}  ── 👤 Users API (últimas 15 linhas) ──${NC}"
@@ -197,13 +159,75 @@ echo ""
 echo -e "${CYAN}  ── 🔄 Orchestrator (últimas 15 linhas) ──${NC}"
 kubectl logs deployment/orchestrator -n ${NS} --tail=15 2>/dev/null | sed 's/^/    /'
 
-# ─── PASSO 9: Verificar MongoDB (Orchestrator Logs) ──────────────
-step "PASSO 9: 🗄️  Logs do Orchestrator no MongoDB"
+# ─── PASSO 7: Verificar MongoDB (Orchestrator Logs) ──────────────
+step "PASSO 7: 🗄️  Logs do Orchestrator no MongoDB"
 kubectl exec deployment/mongodb -n ${NS} -- mongo orchestrator --quiet --authenticationDatabase admin -u admin -p mongo@123 --eval 'var total = db.Logs.count(); print("  Total de eventos registrados: " + total); print(""); db.Logs.find().sort({CreatedAt: -1}).limit(10).forEach(function(doc) { print("  ┌──────────────────────────────────────────────────"); print("  │ Event:   " + doc.EventName); print("  │ Status:  " + doc.Status); print("  │ Created: " + doc.CreatedAt); if (doc.Payload) { var p = doc.Payload; if (p.length > 120) p = p.substring(0,120) + "..."; print("  │ Payload: " + p); } if (doc.Error) { print("  │ Error:   " + doc.Error); } print("  └──────────────────────────────────────────────────"); });' 2>/dev/null
 
-# ─── PASSO 10: Verificar filas RabbitMQ ───────────────────────────
-step "PASSO 10: 🐇 Filas no RabbitMQ"
+# ─── PASSO 8: Verificar filas RabbitMQ ───────────────────────────
+step "PASSO 8: 🐇 Filas no RabbitMQ"
 kubectl exec deployment/rabbitmq -n ${NS} -- rabbitmqctl list_queues name messages consumers 2>/dev/null | grep -v "^Listing\|^Timeout" | sed 's/^/    /'
+
+# ─── PASSO 9: Verificar Prometheus ──────────────────────────────
+step "PASSO 9: 📊 Prometheus (Observabilidade)"
+check_port_forward "prometheus" 9090 9090
+sleep 1
+
+PROM_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:9090/-/ready" 2>/dev/null)
+if [ "$PROM_STATUS" = "200" ]; then
+  pass "Prometheus está pronto! (HTTP ${PROM_STATUS})"
+else
+  fail "Prometheus não está acessível (HTTP ${PROM_STATUS})"
+fi
+
+# Verificar targets do Prometheus
+info "Targets configurados no Prometheus:"
+TARGETS=$(curl -s "http://localhost:9090/api/v1/targets" 2>/dev/null)
+echo "$TARGETS" | python3 -c "
+import sys,json
+try:
+    data = json.load(sys.stdin)
+    for t in data.get('data',{}).get('activeTargets',[]):
+        job = t.get('labels',{}).get('job','?')
+        health = t.get('health','?')
+        url = t.get('scrapeUrl','?')
+        icon = '✅' if health == 'up' else '❌'
+        print(f'    {icon} {job}: {health} ({url})')
+except: print('    ⚠️  Não foi possível obter targets')
+" 2>/dev/null
+
+# ─── PASSO 10: Verificar Grafana ─────────────────────────────────
+step "PASSO 10: 📈 Grafana (Dashboards)"
+check_port_forward "grafana" 3000 3000
+sleep 1
+
+GRAFANA_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:3000/api/health" 2>/dev/null)
+if [ "$GRAFANA_STATUS" = "200" ]; then
+  pass "Grafana está pronto! (HTTP ${GRAFANA_STATUS})"
+  GRAFANA_HEALTH=$(curl -s "http://localhost:3000/api/health" 2>/dev/null)
+  echo -e "  📦 ${GRAFANA_HEALTH}"
+else
+  fail "Grafana não está acessível (HTTP ${GRAFANA_STATUS})"
+fi
+
+# Verificar datasource do Prometheus no Grafana
+DS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -u admin:admin "http://localhost:3000/api/datasources" 2>/dev/null)
+if [ "$DS_STATUS" = "200" ]; then
+  DS_INFO=$(curl -s -u admin:admin "http://localhost:3000/api/datasources" 2>/dev/null)
+  DS_COUNT=$(echo "$DS_INFO" | python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null)
+  if [ "$DS_COUNT" -gt 0 ] 2>/dev/null; then
+    pass "Datasource Prometheus configurado! (${DS_COUNT} datasource(s))"
+    echo "$DS_INFO" | python3 -c "
+import sys,json
+for ds in json.load(sys.stdin):
+    print(f'    📡 {ds[\"name\"]} ({ds[\"type\"]}) → {ds[\"url\"]}')
+" 2>/dev/null
+  else
+    fail "Nenhum datasource configurado no Grafana"
+  fi
+fi
+
+info "Acesse o Grafana: http://localhost:3000 (admin/admin)"
+info "Acesse o Prometheus: http://localhost:9090"
 
 echo ""
 echo "═══════════════════════════════════════════════════════════════"

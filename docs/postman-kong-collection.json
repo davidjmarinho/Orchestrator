@@ -6,13 +6,41 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "base_url", "value": "http://localhost:9080", "type": "string" },
-    { "key": "jwt_token", "value": "", "type": "string" },
-    { "key": "real_token", "value": "", "type": "string" },
-    { "key": "user_id", "value": "", "type": "string" },
-    { "key": "game_id", "value": "", "type": "string" },
-    { "key": "test_email", "value": "", "type": "string" },
-    { "key": "test_password", "value": "Gamer@2026!", "type": "string" }
+    {
+      "key": "base_url",
+      "value": "http://localhost:9080",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "real_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "game_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test_email",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test_password",
+      "value": "Gamer@2026!",
+      "type": "string"
+    }
   ],
   "event": [
     {
@@ -69,16 +97,31 @@
           "name": "1.1 POST Register — Criar usuário",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\",\n  \"fullName\": \"Postman Tester\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/users/register",
-              "host": ["{{base_url}}"],
-              "path": ["api", "users", "register"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "register"
+              ]
             },
             "description": "## Rota Pública — Kong NÃO exige JWT\n\nO Kong roteia `/api/users/register` direto para o backend sem validar autenticação.\n\nEsperado: **201 Created** + body com `id`, `email`, `fullName`\n\nO `id` do usuário é salvo automaticamente na variável `user_id`."
           },
@@ -115,16 +158,31 @@
           "name": "1.2 POST Login — Obter token real",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/users/login",
-              "host": ["{{base_url}}"],
-              "path": ["api", "users", "login"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "login"
+              ]
             },
             "description": "## Rota Pública — Kong NÃO exige JWT\n\nO Kong roteia `/api/users/login` direto para o backend.\n\nEsperado: **200 OK** + body com `token`\n\nO token real (emitido pela UsersAPI) é salvo na variável `real_token`.\nEste token funciona tanto no Kong quanto direto nas APIs."
           },
@@ -161,18 +219,34 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"The Legend of Zelda: Tears of the Kingdom\",\n  \"description\": \"Aventura épica em mundo aberto pela Nintendo\",\n  \"price\": 299.90,\n  \"category\": \"Aventura\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/catalog/games",
-              "host": ["{{base_url}}"],
-              "path": ["api", "catalog", "games"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                "games"
+              ]
             },
             "description": "## Rota Protegida — Kong EXIGE JWT\n\nO Kong valida o JWT (HS256, iss=UsersAPI) antes de rotear para o catalog-api.\n\nEsperado: **201 Created** + body com o jogo criado\n\nO `id` do jogo é salvo na variável `game_id`.\n\n> O JWT é gerado automaticamente pelo Pre-request Script da coleção."
           },
@@ -208,11 +282,22 @@
           "name": "1.4 GET Listar Jogos — Catalog API (JWT)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/api/catalog/games",
-              "host": ["{{base_url}}"],
-              "path": ["api", "catalog", "games"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                "games"
+              ]
             },
             "description": "## Rota Protegida — Kong EXIGE JWT\n\nLista todos os jogos cadastrados no catálogo.\n\nEsperado: **200 OK** + array de jogos"
           },
@@ -249,11 +334,23 @@
           "name": "1.5 GET Buscar Jogo por ID — Catalog API (JWT)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/api/catalog/games/{{game_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "catalog", "games", "{{game_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                "games",
+                "{{game_id}}"
+              ]
             },
             "description": "## Rota Protegida — Kong EXIGE JWT\n\nBusca um jogo específico pelo ID (salvo no passo 1.3).\n\nEsperado: **200 OK** + dados do jogo\n\n> Na segunda execução, o resultado vem do cache Redis (cache hit)."
           },
@@ -288,11 +385,22 @@
           "name": "1.6 GET Buscar Usuário — Users API (JWT real)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{real_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{real_token}}"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/api/users/{{user_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "users", "{{user_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{user_id}}"
+              ]
             },
             "description": "## Rota Protegida — Kong EXIGE JWT\n\nBusca o usuário criado no passo 1.1 usando o token real obtido no login.\n\nUsa `real_token` em vez de `jwt_token` para testar com o token emitido pela UsersAPI.\n\nEsperado: **200 OK** + dados do usuário"
           },
@@ -324,16 +432,31 @@
           "name": "POST /api/users/register — sem JWT (pública)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"public-test@fcgtech.com\",\n  \"password\": \"Teste@2026!\",\n  \"fullName\": \"Teste Rota Pública\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/users/register",
-              "host": ["{{base_url}}"],
-              "path": ["api", "users", "register"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "register"
+              ]
             },
             "description": "Rota pública — Kong NÃO exige JWT.\nConfig: `~/api/users/register$` (regex match exato)\n\nEsperado: 201 (novo) ou 400 (já existe) — nunca 401."
           },
@@ -359,16 +482,31 @@
           "name": "POST /api/users/login — sem JWT (pública)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"public-test@fcgtech.com\",\n  \"password\": \"Teste@2026!\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/users/login",
-              "host": ["{{base_url}}"],
-              "path": ["api", "users", "login"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "login"
+              ]
             },
             "description": "Rota pública — Kong NÃO exige JWT.\nConfig: `~/api/users/login$` (regex match exato)\n\nEsperado: 200 (credenciais válidas) ou 401 do backend (senha errada) — nunca 401 do Kong."
           },
@@ -406,11 +544,21 @@
           "name": "GET /api/users — JWT válido ✅",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/api/users",
-              "host": ["{{base_url}}"],
-              "path": ["api", "users"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
             },
             "description": "Rota protegida — Kong valida o JWT antes de rotear.\nConfig: rota `/api/users` com plugin JWT.\n\nEsperado: Kong aceita o token (não 401). Backend retorna dados ou erro de negócio."
           },
@@ -436,11 +584,22 @@
           "name": "GET /api/catalog/games — JWT válido ✅",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/api/catalog/games",
-              "host": ["{{base_url}}"],
-              "path": ["api", "catalog", "games"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                "games"
+              ]
             },
             "description": "Rota protegida — Kong valida JWT e roteia para catalog-api.\nConfig: rota `/api/catalog` com plugin JWT (prefix match inclui /games).\n\nEsperado: 200 + array de jogos"
           },
@@ -473,18 +632,34 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"God of War: Ragnarök\",\n  \"description\": \"Ação e aventura nórdica pela Santa Monica Studio\",\n  \"price\": 199.90,\n  \"category\": \"Ação\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/catalog/games",
-              "host": ["{{base_url}}"],
-              "path": ["api", "catalog", "games"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                "games"
+              ]
             },
             "description": "Rota protegida — Kong valida o JWT.\n\nCria um jogo no catálogo.\nEsperado: 201 Created + body do jogo"
           },
@@ -519,8 +694,13 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/users",
-              "host": ["{{base_url}}"],
-              "path": ["api", "users"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
             },
             "description": "Rota protegida acessada SEM token.\n\nEsperado: **401 Unauthorized** pelo Kong."
           },
@@ -550,8 +730,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/catalog/games",
-              "host": ["{{base_url}}"],
-              "path": ["api", "catalog", "games"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                "games"
+              ]
             },
             "description": "Rota protegida do catálogo acessada SEM token.\n\nEsperado: **401 Unauthorized** pelo Kong."
           },
@@ -573,16 +759,31 @@
           "name": "POST /api/catalog/games — SEM token → 401 🚫",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Jogo Sem Auth\",\n  \"description\": \"Não deveria ser criado\",\n  \"price\": 0,\n  \"category\": \"Nenhuma\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/catalog/games",
-              "host": ["{{base_url}}"],
-              "path": ["api", "catalog", "games"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                "games"
+              ]
             },
             "description": "Tentativa de criar jogo SEM token.\n\nEsperado: **401 Unauthorized** — Kong bloqueia antes de chegar no backend."
           },
@@ -611,8 +812,13 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/products",
-              "host": ["{{base_url}}"],
-              "path": ["api", "products"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
             },
             "description": "Rota `/api/products` (alias catalog) acessada SEM token.\n\nEsperado: **401 Unauthorized** pelo Kong."
           },
@@ -640,11 +846,21 @@
           "name": "GET /api/users — token LIXO → 401 🚫",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer isto.nao.e.um.jwt.valido" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer isto.nao.e.um.jwt.valido"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/api/users",
-              "host": ["{{base_url}}"],
-              "path": ["api", "users"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
             },
             "description": "Token com formato totalmente inválido.\n\nEsperado: **401** — Kong rejeita por formato inválido."
           },
@@ -666,11 +882,21 @@
           "name": "GET /api/users — assinatura INVÁLIDA → 401 🚫",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJVc2Vyc0FQSSIsInN1YiI6InRlc3QiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6OTk5OTk5OTk5OX0.assinatura_ERRADA_aqui" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJVc2Vyc0FQSSIsInN1YiI6InRlc3QiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6OTk5OTk5OTk5OX0.assinatura_ERRADA_aqui"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/api/users",
-              "host": ["{{base_url}}"],
-              "path": ["api", "users"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
             },
             "description": "Token com header e payload válidos, mas assinatura errada.\niss=UsersAPI (correto), mas a assinatura não bate com o secret.\n\nEsperado: **401** — Kong valida a assinatura HS256 contra o secret configurado."
           },
@@ -692,11 +918,22 @@
           "name": "GET /api/catalog/games — ISS errado → 401 🚫",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJPVVRSQV9BUEkiLCJzdWIiOiJ0ZXN0IiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjk5OTk5OTk5OTl9.invalido" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJPVVRSQV9BUEkiLCJzdWIiOiJ0ZXN0IiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjk5OTk5OTk5OTl9.invalido"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/api/catalog/games",
-              "host": ["{{base_url}}"],
-              "path": ["api", "catalog", "games"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                "games"
+              ]
             },
             "description": "Token com iss=`OUTRA_API` (em vez de `UsersAPI`).\n\nO Kong usa o claim `iss` como key para buscar o consumer.\nComo não há consumer com key=OUTRA_API, retorna 401.\n\nEsperado: **401 Unauthorized**"
           },
@@ -718,11 +955,21 @@
           "name": "GET /api/users — token EXPIRADO → 401 🚫",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJVc2Vyc0FQSSIsInN1YiI6InRlc3QiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6MTcwMDAwMDAwMX0.invalido" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJVc2Vyc0FQSSIsInN1YiI6InRlc3QiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6MTcwMDAwMDAwMX0.invalido"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/api/users",
-              "host": ["{{base_url}}"],
-              "path": ["api", "users"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
             },
             "description": "Token com `exp` no passado (já expirado).\niss=UsersAPI (correto), mas expirado.\n\nEsperado: **401** — Kong valida o campo exp."
           },
@@ -751,14 +998,28 @@
           "request": {
             "method": "OPTIONS",
             "header": [
-              { "key": "Origin", "value": "https://meuapp.fcgtech.com" },
-              { "key": "Access-Control-Request-Method", "value": "POST" },
-              { "key": "Access-Control-Request-Headers", "value": "Authorization,Content-Type" }
+              {
+                "key": "Origin",
+                "value": "https://meuapp.fcgtech.com"
+              },
+              {
+                "key": "Access-Control-Request-Method",
+                "value": "POST"
+              },
+              {
+                "key": "Access-Control-Request-Headers",
+                "value": "Authorization,Content-Type"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/users",
-              "host": ["{{base_url}}"],
-              "path": ["api", "users"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
             },
             "description": "Simula um preflight CORS de um frontend em https://meuapp.fcgtech.com.\n\nO Kong deve responder com os headers CORS sem exigir JWT.\n\nEsperado: 200 ou 204 + headers CORS"
           },
@@ -793,14 +1054,29 @@
           "request": {
             "method": "OPTIONS",
             "header": [
-              { "key": "Origin", "value": "https://meuapp.fcgtech.com" },
-              { "key": "Access-Control-Request-Method", "value": "GET" },
-              { "key": "Access-Control-Request-Headers", "value": "Authorization" }
+              {
+                "key": "Origin",
+                "value": "https://meuapp.fcgtech.com"
+              },
+              {
+                "key": "Access-Control-Request-Method",
+                "value": "GET"
+              },
+              {
+                "key": "Access-Control-Request-Headers",
+                "value": "Authorization"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/catalog/games",
-              "host": ["{{base_url}}"],
-              "path": ["api", "catalog", "games"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                "games"
+              ]
             },
             "description": "Preflight CORS para rota do catálogo.\n\nEsperado: 200 ou 204 + headers CORS"
           },
@@ -835,8 +1111,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/users/register",
-              "host": ["{{base_url}}"],
-              "path": ["api", "users", "register"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "register"
+              ]
             },
             "description": "Usa a rota pública register como health check indireto.\nSe Kong responde (qualquer status != connection error), o backend está UP.\n\nEsperado: qualquer resposta HTTP (não connection refused)"
           },
@@ -862,11 +1144,22 @@
           "name": "GET /api/catalog/games — Health CatalogAPI (via Kong JWT)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{jwt_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/api/catalog/games",
-              "host": ["{{base_url}}"],
-              "path": ["api", "catalog", "games"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                "games"
+              ]
             },
             "description": "Usa a rota de listar jogos como health check do CatalogAPI.\nRequer JWT (rota protegida).\n\nEsperado: 200 + array (backend respondendo)"
           },
