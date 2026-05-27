@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: konga
+  namespace: fcg-tech-fase-2
+  labels:
+    app: konga
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: konga
+  template:
+    metadata:
+      labels:
+        app: konga
+    spec:
+      initContainers:
+        - name: konga-prepare
+          image: pantsel/konga:latest
+          imagePullPolicy: IfNotPresent
+          args: ["-c", "prepare", "-a", "postgres", "-u", "postgresql://$(DB_USER):$(DB_PASSWORD)@kong-database:5432/konga"]
+          env:
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: kong-db-secret
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kong-db-secret
+                  key: password
+      containers:
+        - name: konga
+          image: pantsel/konga:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: kong-db-secret
+                  key: token-secret
+            - name: DB_ADAPTER
+              value: postgres
+            - name: DB_HOST
+              value: kong-database
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_DATABASE
+              value: konga
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: kong-db-secret
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kong-db-secret
+                  key: password
+            - name: NODE_ENV
+              value: production
+          ports:
+            - name: web
+              containerPort: 1337
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "300m"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 1337
+            initialDelaySeconds: 60
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 1337
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: konga
+  namespace: fcg-tech-fase-2
+  labels:
+    app: konga
+spec:
+  type: ClusterIP
+  selector:
+    app: konga
+  ports:
+    - name: web
+      port: 1337
+      targetPort: 1337
+      protocol: TCP

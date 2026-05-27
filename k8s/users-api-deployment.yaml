@@ -24,7 +24,7 @@ spec:
         command: ['sh', '-c', 'echo "Aguardando RabbitMQ..."; until nc -z rabbitmq 5672; do echo "RabbitMQ indisponível - aguardando..."; sleep 3; done; echo "RabbitMQ está pronto!"']
       containers:
       - name: users-api
-        image: davidjmarinho/users-api:v1
+        image: davidjmarinho/users-api:v2
         imagePullPolicy: Always
         ports:
         - containerPort: 80
@@ -41,6 +41,16 @@ spec:
           value: Production
         - name: ASPNETCORE_URLS
           value: http://+:80
+        # ─── Redis Cache ──────────────────────────────────────
+        - name: REDIS_HOST
+          value: redis
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-secret
+              key: password
         resources:
           requests:
             memory: "128Mi"

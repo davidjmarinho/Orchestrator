@@ -1,0 +1,140 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kong
+  namespace: fcg-tech-fase-2
+  labels:
+    app: kong
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kong
+  template:
+    metadata:
+      labels:
+        app: kong
+    spec:
+      initContainers:
+        - name: kong-migrations
+          image: kong:3.4
+          imagePullPolicy: IfNotPresent
+          command: ["kong", "migrations", "bootstrap"]
+          env:
+            - name: KONG_DATABASE
+              value: postgres
+            - name: KONG_PG_HOST
+              value: kong-database
+            - name: KONG_PG_DATABASE
+              value: kong
+            - name: KONG_PG_USER
+              valueFrom:
+                secretKeyRef:
+                  name: kong-db-secret
+                  key: username
+            - name: KONG_PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kong-db-secret
+                  key: password
+      containers:
+        - name: kong
+          image: kong:3.4
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: KONG_DATABASE
+              value: postgres
+            - name: KONG_PG_HOST
+              value: kong-database
+            - name: KONG_PG_DATABASE
+              value: kong
+            - name: KONG_PG_USER
+              valueFrom:
+                secretKeyRef:
+                  name: kong-db-secret
+                  key: username
+            - name: KONG_PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kong-db-secret
+                  key: password
+            - name: KONG_PROXY_LISTEN
+              value: "0.0.0.0:8000"
+            - name: KONG_ADMIN_LISTEN
+              value: "0.0.0.0:8001"
+            - name: KONG_PROXY_ACCESS_LOG
+              value: /dev/stdout
+            - name: KONG_ADMIN_ACCESS_LOG
+              value: /dev/stdout
+            - name: KONG_PROXY_ERROR_LOG
+              value: /dev/stderr
+            - name: KONG_ADMIN_ERROR_LOG
+              value: /dev/stderr
+            - name: KONG_LOG_LEVEL
+              value: info
+            - name: KONG_NGINX_WORKER_PROCESSES
+              value: "2"
+          ports:
+            - name: proxy
+              containerPort: 8000
+            - name: admin
+              containerPort: 8001
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "200m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /status
+              port: 8001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /status
+              port: 8001
+            initialDelaySeconds: 15
+            periodSeconds: 5
+
+---
+# Serviço externo: único ponto de entrada para tráfego externo
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-proxy
+  namespace: fcg-tech-fase-2
+  labels:
+    app: kong
+spec:
+  type: LoadBalancer
+  selector:
+    app: kong
+  ports:
+    - name: proxy
+      port: 80
+      targetPort: 8000
+      protocol: TCP
+
+---
+# Admin API acessível apenas dentro do cluster
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-admin
+  namespace: fcg-tech-fase-2
+  labels:
+    app: kong
+spec:
+  type: ClusterIP
+  selector:
+    app: kong
+  ports:
+    - name: admin
+      port: 8001
+      targetPort: 8001
+      protocol: TCP
+
+

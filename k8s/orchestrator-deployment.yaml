@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
       - name: orchestrator
-        image: davidjmarinho/orchestrator:v4
-        imagePullPolicy: Always
+        image: davidjmarinho/orchestrator:v5
+        imagePullPolicy: Never
         env:
         - name: RABBITMQ_HOST
           value: rabbitmq

@@ -24,12 +24,22 @@ spec:
         command: ['sh', '-c', 'echo "Aguardando RabbitMQ..."; until nc -z rabbitmq 5672; do echo "RabbitMQ indisponível - aguardando..."; sleep 3; done; echo "RabbitMQ está pronto!"']
       containers:
       - name: catalog-api
-        image: davidjmarinho/catalog-api:v1
+        image: davidjmarinho/catalog-api:v2
         imagePullPolicy: Always
         ports:
         - containerPort: 80
           name: http
         env:
+        # Redis Cache
+        - name: REDIS_HOST
+          value: "redis"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-secret
+              key: password
         # Override ConnectionStrings.Default from appsettings.json
         - name: ConnectionStrings__Default
           value: "Host=postgres;Port=5432;Database=fcg_catalog_db;Username=catalog;Password=catalogpw"

@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kong-declarative-config
+  namespace: fcg-tech-fase-2
+data:
+  kong.yml: |
+    _format_version: "3.0"
+    _transform: true
+
+    services:
+      # ── Users API ───────────────────────────────────────────────
+      - name: users-api
+        url: http://users-api:80
+        routes:
+          # Rota pública: login e registro não exigem JWT
+          - name: users-api-public-route
+            paths:
+              - ~/api/users/login$
+              - ~/api/users/register$
+            strip_path: false
+            methods:
+              - GET
+              - POST
+              - OPTIONS
+
+          # Rota protegida: demais endpoints de usuários exigem JWT
+          - name: users-api-protected-route
+            paths:
+              - /api/users
+            strip_path: false
+            plugins:
+              - name: jwt
+
+      # ── Catalog API ─────────────────────────────────────────────
+      - name: catalog-api
+        url: http://catalog-api:80
+        routes:
+          - name: catalog-api-route
+            paths:
+              - /api/catalog
+              - /api/products
+            strip_path: false
+            plugins:
+              - name: jwt
+
+    # Consumer que representa os clientes autenticados
+    consumers:
+      - username: app-consumer
+        jwt_secrets:
+          - algorithm: HS256
+            key: UsersAPI                          # corresponde ao claim "iss" do token
+            secret: ChaveSuperSecretaCom32Caracteres!
+
+    # Plugin global de CORS
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - "*"
+          methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - PATCH
+            - OPTIONS
+          headers:
+            - Authorization
+            - Content-Type
+          max_age: 3600

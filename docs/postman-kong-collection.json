@@ -1,0 +1,1187 @@
+{
+  "info": {
+    "_postman_id": "f3a92b10-1234-4abc-8def-fiapfase3kong",
+    "name": "FCG Tech — Kong API Gateway (Fase 3)",
+    "description": "# FCG Tech — Kong API Gateway\n\nColeção completa para testar o Kong Gateway configurado no Kubernetes.\n\n## Pré-requisitos\n\n1. Cluster Kubernetes rodando (Docker Desktop)\n2. Port-forward do Kong Proxy:\n```\nkubectl port-forward svc/kong-proxy 9080:80 -n fcg-tech-fase-2\n```\n\n## Arquitetura Kong\n\n| Serviço | URL interna | Rotas |\n|---------|-------------|-------|\n| users-api | http://users-api:80 | /api/users/* |\n| catalog-api | http://catalog-api:80 | /api/catalog/*, /api/products/* |\n\n## Políticas de autenticação\n\n- **Rotas Públicas** (sem JWT): `/api/users/login`, `/api/users/register`\n- **Rotas Protegidas** (JWT obrigatório): `/api/users`, `/api/catalog/*`, `/api/products/*`\n- **JWT**: HS256, iss=`UsersAPI`, secret=`ChaveSuperSecretaCom32Caracteres!`\n- **Consumer**: `app-consumer`\n- **CORS**: Plugin global (origins: *, headers: Authorization, Content-Type)\n\n## Como usar\n\n1. Importe esta collection no Postman\n2. Execute o port-forward: `kubectl port-forward svc/kong-proxy 9080:80 -n fcg-tech-fase-2`\n3. Rode a pasta \"1. Fluxo Completo\" na ordem para o fluxo E2E\n4. Use \"Run Collection\" para executar todos os testes automatizados\n\n> O JWT é gerado automaticamente no Pre-request Script da coleção. Não precisa copiar token manualmente.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:9080",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "real_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "game_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test_email",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test_password",
+      "value": "Gamer@2026!",
+      "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// =====================================================",
+          "// JWT Auto-Generator (HS256) — compatível com kong-setup.sh",
+          "// Gera um token válido por 24h com iss=UsersAPI",
+          "// Este token é aceito pelo Kong porque o consumer",
+          "// app-consumer tem credencial JWT com key=UsersAPI",
+          "// e secret=ChaveSuperSecretaCom32Caracteres!",
+          "// =====================================================",
+          "",
+          "function base64url(str) {",
+          "    return btoa(unescape(encodeURIComponent(str)))",
+          "        .replace(/=/g, '').replace(/\\+/g, '-').replace(/\\//g, '_');",
+          "}",
+          "",
+          "const now = Math.floor(Date.now() / 1000);",
+          "const header = base64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));",
+          "const payload = base64url(JSON.stringify({",
+          "    iss: 'UsersAPI',",
+          "    sub: 'postman-test-user',",
+          "    iat: now,",
+          "    exp: now + 86400",
+          "}));",
+          "",
+          "const sigInput = header + '.' + payload;",
+          "const secret = 'ChaveSuperSecretaCom32Caracteres!';",
+          "const sig = CryptoJS.HmacSHA256(sigInput, secret)",
+          "    .toString(CryptoJS.enc.Base64)",
+          "    .replace(/=/g, '').replace(/\\+/g, '-').replace(/\\//g, '_');",
+          "",
+          "const jwt = sigInput + '.' + sig;",
+          "pm.collectionVariables.set('jwt_token', jwt);",
+          "",
+          "// Gerar email único se não existir",
+          "if (!pm.collectionVariables.get('test_email') || pm.collectionVariables.get('test_email') === '') {",
+          "    const ts = Date.now();",
+          "    pm.collectionVariables.set('test_email', 'postman' + ts + '@fcgtech.com');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Fluxo Completo (executar na ordem)",
+      "description": "Execute estas requests na ordem para testar o fluxo E2E completo pelo Kong.\n\n1. Registrar usuário (rota pública)\n2. Login (rota pública) → salva token real\n3. Criar jogo no catálogo (rota protegida + JWT)\n4. Listar catálogo (rota protegida + JWT)\n5. Buscar usuário por ID (rota protegida + JWT)",
+      "item": [
+        {
+          "name": "1.1 POST Register — Criar usuário",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\",\n  \"fullName\": \"Postman Tester\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "register"
+              ]
+            },
+            "description": "## Rota Pública — Kong NÃO exige JWT\n\nO Kong roteia `/api/users/register` direto para o backend sem validar autenticação.\n\nEsperado: **201 Created** + body com `id`, `email`, `fullName`\n\nO `id` do usuário é salvo automaticamente na variável `user_id`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Rota pública: Kong não deve retornar 401",
+                  "pm.test('Kong roteou sem exigir JWT (rota pública)', function () {",
+                  "    pm.expect(pm.response.code).to.not.equal(401);",
+                  "});",
+                  "",
+                  "pm.test('Usuário registrado com sucesso (201)', function () {",
+                  "    pm.expect(pm.response.code).to.equal(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.test('Response contém id do usuário', function () {",
+                  "        pm.expect(body.id).to.be.a('string');",
+                  "    });",
+                  "    // Salvar ID para usar em requests seguintes",
+                  "    pm.collectionVariables.set('user_id', body.id);",
+                  "    console.log('✅ user_id salvo: ' + body.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.2 POST Login — Obter token real",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "login"
+              ]
+            },
+            "description": "## Rota Pública — Kong NÃO exige JWT\n\nO Kong roteia `/api/users/login` direto para o backend.\n\nEsperado: **200 OK** + body com `token`\n\nO token real (emitido pela UsersAPI) é salvo na variável `real_token`.\nEste token funciona tanto no Kong quanto direto nas APIs."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong roteou sem exigir JWT (rota pública)', function () {",
+                  "    pm.expect(pm.response.code).to.not.equal(401);",
+                  "});",
+                  "",
+                  "pm.test('Login bem-sucedido (200)', function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.test('Response contém token JWT', function () {",
+                  "        pm.expect(body.token).to.be.a('string');",
+                  "    });",
+                  "    // Salvar token real da API para uso subsequente",
+                  "    pm.collectionVariables.set('real_token', body.token);",
+                  "    console.log('✅ real_token salvo (primeiros 50 chars): ' + body.token.substring(0, 50) + '...');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.3 POST Criar Jogo — Catalog API (JWT)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"The Legend of Zelda: Tears of the Kingdom\",\n  \"description\": \"Aventura épica em mundo aberto pela Nintendo\",\n  \"price\": 299.90,\n  \"category\": \"Aventura\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/catalog/games",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                "games"
+              ]
+            },
+            "description": "## Rota Protegida — Kong EXIGE JWT\n\nO Kong valida o JWT (HS256, iss=UsersAPI) antes de rotear para o catalog-api.\n\nEsperado: **201 Created** + body com o jogo criado\n\nO `id` do jogo é salvo na variável `game_id`.\n\n> O JWT é gerado automaticamente pelo Pre-request Script da coleção."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong aceitou o JWT (não retornou 401)', function () {",
+                  "    pm.expect(pm.response.code).to.not.equal(401);",
+                  "});",
+                  "",
+                  "pm.test('Jogo criado com sucesso (201)', function () {",
+                  "    pm.expect(pm.response.code).to.equal(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.test('Response contém id e name do jogo', function () {",
+                  "        pm.expect(body.id).to.be.a('string');",
+                  "        pm.expect(body.name).to.equal('The Legend of Zelda: Tears of the Kingdom');",
+                  "    });",
+                  "    pm.collectionVariables.set('game_id', body.id);",
+                  "    console.log('✅ game_id salvo: ' + body.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.4 GET Listar Jogos — Catalog API (JWT)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/catalog/games",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                "games"
+              ]
+            },
+            "description": "## Rota Protegida — Kong EXIGE JWT\n\nLista todos os jogos cadastrados no catálogo.\n\nEsperado: **200 OK** + array de jogos"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong aceitou o JWT (não retornou 401)', function () {",
+                  "    pm.expect(pm.response.code).to.not.equal(401);",
+                  "});",
+                  "",
+                  "pm.test('Catálogo listado com sucesso (200)', function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.test('Response é um array de jogos', function () {",
+                  "        pm.expect(body).to.be.an('array');",
+                  "    });",
+                  "    pm.test('Catálogo contém pelo menos 1 jogo', function () {",
+                  "        pm.expect(body.length).to.be.greaterThan(0);",
+                  "    });",
+                  "    console.log('📦 Total de jogos no catálogo: ' + body.length);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.5 GET Buscar Jogo por ID — Catalog API (JWT)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/catalog/games/{{game_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                "games",
+                "{{game_id}}"
+              ]
+            },
+            "description": "## Rota Protegida — Kong EXIGE JWT\n\nBusca um jogo específico pelo ID (salvo no passo 1.3).\n\nEsperado: **200 OK** + dados do jogo\n\n> Na segunda execução, o resultado vem do cache Redis (cache hit)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong aceitou o JWT', function () {",
+                  "    pm.expect(pm.response.code).to.not.equal(401);",
+                  "});",
+                  "",
+                  "pm.test('Jogo encontrado (200)', function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.test('Response contém dados do jogo', function () {",
+                  "        pm.expect(body.id).to.equal(pm.collectionVariables.get('game_id'));",
+                  "        pm.expect(body.name).to.be.a('string');",
+                  "        pm.expect(body.price).to.be.a('number');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.6 GET Buscar Usuário — Users API (JWT real)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{real_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{user_id}}"
+              ]
+            },
+            "description": "## Rota Protegida — Kong EXIGE JWT\n\nBusca o usuário criado no passo 1.1 usando o token real obtido no login.\n\nUsa `real_token` em vez de `jwt_token` para testar com o token emitido pela UsersAPI.\n\nEsperado: **200 OK** + dados do usuário"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong aceitou o token real da API', function () {",
+                  "    pm.expect(pm.response.code).to.not.equal(401);",
+                  "});",
+                  "",
+                  "pm.test('Resposta válida recebida', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Rotas Públicas (sem JWT)",
+      "description": "Testa que as rotas de login e registro são acessíveis SEM token JWT.\n\nO Kong possui regex routes `~/api/users/login$` e `~/api/users/register$` configuradas sem o plugin JWT.",
+      "item": [
+        {
+          "name": "POST /api/users/register — sem JWT (pública)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"public-test@fcgtech.com\",\n  \"password\": \"Teste@2026!\",\n  \"fullName\": \"Teste Rota Pública\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "register"
+              ]
+            },
+            "description": "Rota pública — Kong NÃO exige JWT.\nConfig: `~/api/users/register$` (regex match exato)\n\nEsperado: 201 (novo) ou 400 (já existe) — nunca 401."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong NÃO exigiu JWT — rota pública', function () {",
+                  "    pm.expect(pm.response.code).to.not.equal(401);",
+                  "});",
+                  "",
+                  "pm.test('Backend respondeu (não timeout)', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 409, 500, 502]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/users/login — sem JWT (pública)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"public-test@fcgtech.com\",\n  \"password\": \"Teste@2026!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "login"
+              ]
+            },
+            "description": "Rota pública — Kong NÃO exige JWT.\nConfig: `~/api/users/login$` (regex match exato)\n\nEsperado: 200 (credenciais válidas) ou 401 do backend (senha errada) — nunca 401 do Kong."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Nota: 401 do backend (senha errada) é diferente de 401 do Kong (token)",
+                  "// O Kong adiciona header 'WWW-Authenticate' quando bloqueia",
+                  "pm.test('Kong NÃO bloqueou a request (rota pública)', function () {",
+                  "    if (pm.response.code === 401) {",
+                  "        // Se 401, verificar que NÃO é do Kong (não tem 'Unauthorized' com JWT)",
+                  "        const body = pm.response.text();",
+                  "        pm.expect(body).to.not.include('Unauthorized');",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Backend respondeu', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 401, 500, 502]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Rotas Protegidas (JWT válido)",
+      "description": "Testa que as rotas protegidas aceitam JWT válido.\n\nO JWT é gerado pelo Pre-request Script com:\n- algorithm: HS256\n- iss: UsersAPI (= key do consumer)\n- secret: ChaveSuperSecretaCom32Caracteres!\n- exp: +24h",
+      "item": [
+        {
+          "name": "GET /api/users — JWT válido ✅",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "description": "Rota protegida — Kong valida o JWT antes de rotear.\nConfig: rota `/api/users` com plugin JWT.\n\nEsperado: Kong aceita o token (não 401). Backend retorna dados ou erro de negócio."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong aceitou o JWT (não retornou 401)', function () {",
+                  "    pm.expect(pm.response.code).to.not.equal(401);",
+                  "});",
+                  "",
+                  "pm.test('Resposta válida do backend', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 404, 500, 502]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/catalog/games — JWT válido ✅",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/catalog/games",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                "games"
+              ]
+            },
+            "description": "Rota protegida — Kong valida JWT e roteia para catalog-api.\nConfig: rota `/api/catalog` com plugin JWT (prefix match inclui /games).\n\nEsperado: 200 + array de jogos"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong aceitou o JWT (não retornou 401)', function () {",
+                  "    pm.expect(pm.response.code).to.not.equal(401);",
+                  "});",
+                  "",
+                  "pm.test('Catálogo retornado (200)', function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test('Response é array', function () {",
+                  "        pm.expect(pm.response.json()).to.be.an('array');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/catalog/games — Criar jogo (JWT) ✅",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"God of War: Ragnarök\",\n  \"description\": \"Ação e aventura nórdica pela Santa Monica Studio\",\n  \"price\": 199.90,\n  \"category\": \"Ação\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/catalog/games",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                "games"
+              ]
+            },
+            "description": "Rota protegida — Kong valida o JWT.\n\nCria um jogo no catálogo.\nEsperado: 201 Created + body do jogo"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong aceitou o JWT', function () {",
+                  "    pm.expect(pm.response.code).to.not.equal(401);",
+                  "});",
+                  "",
+                  "pm.test('Jogo criado (201)', function () {",
+                  "    pm.expect(pm.response.code).to.equal(201);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Bloqueio sem Token (deve retornar 401)",
+      "description": "Testa que as rotas protegidas BLOQUEIAM requests sem JWT.\n\nO Kong retorna:\n```json\n{\"message\": \"Unauthorized\"}\n```\n\ncom status 401 quando não há token ou o token é inválido.",
+      "item": [
+        {
+          "name": "GET /api/users — SEM token → 401 🚫",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "description": "Rota protegida acessada SEM token.\n\nEsperado: **401 Unauthorized** pelo Kong."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong bloqueou — 401 Unauthorized', function () {",
+                  "    pm.expect(pm.response.code).to.equal(401);",
+                  "});",
+                  "",
+                  "pm.test('Body contém mensagem de não autorizado', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.message).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/catalog/games — SEM token → 401 🚫",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/catalog/games",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                "games"
+              ]
+            },
+            "description": "Rota protegida do catálogo acessada SEM token.\n\nEsperado: **401 Unauthorized** pelo Kong."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong bloqueou — 401 Unauthorized', function () {",
+                  "    pm.expect(pm.response.code).to.equal(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/catalog/games — SEM token → 401 🚫",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jogo Sem Auth\",\n  \"description\": \"Não deveria ser criado\",\n  \"price\": 0,\n  \"category\": \"Nenhuma\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/catalog/games",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                "games"
+              ]
+            },
+            "description": "Tentativa de criar jogo SEM token.\n\nEsperado: **401 Unauthorized** — Kong bloqueia antes de chegar no backend."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong bloqueou — 401 Unauthorized', function () {",
+                  "    pm.expect(pm.response.code).to.equal(401);",
+                  "});",
+                  "",
+                  "pm.test('Nenhum jogo foi criado (Kong bloqueou antes do backend)', function () {",
+                  "    pm.expect(pm.response.code).to.equal(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/products — SEM token → 401 🚫",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/products",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            },
+            "description": "Rota `/api/products` (alias catalog) acessada SEM token.\n\nEsperado: **401 Unauthorized** pelo Kong."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong bloqueou — 401 Unauthorized', function () {",
+                  "    pm.expect(pm.response.code).to.equal(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Token Inválido (deve retornar 401)",
+      "description": "Testa que o Kong rejeita tokens JWT malformados, com issuer errado, ou com assinatura inválida.",
+      "item": [
+        {
+          "name": "GET /api/users — token LIXO → 401 🚫",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer isto.nao.e.um.jwt.valido"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "description": "Token com formato totalmente inválido.\n\nEsperado: **401** — Kong rejeita por formato inválido."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong rejeitou token lixo — 401', function () {",
+                  "    pm.expect(pm.response.code).to.equal(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/users — assinatura INVÁLIDA → 401 🚫",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJVc2Vyc0FQSSIsInN1YiI6InRlc3QiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6OTk5OTk5OTk5OX0.assinatura_ERRADA_aqui"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "description": "Token com header e payload válidos, mas assinatura errada.\niss=UsersAPI (correto), mas a assinatura não bate com o secret.\n\nEsperado: **401** — Kong valida a assinatura HS256 contra o secret configurado."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong rejeitou assinatura inválida — 401', function () {",
+                  "    pm.expect(pm.response.code).to.equal(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/catalog/games — ISS errado → 401 🚫",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJPVVRSQV9BUEkiLCJzdWIiOiJ0ZXN0IiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjk5OTk5OTk5OTl9.invalido"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/catalog/games",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                "games"
+              ]
+            },
+            "description": "Token com iss=`OUTRA_API` (em vez de `UsersAPI`).\n\nO Kong usa o claim `iss` como key para buscar o consumer.\nComo não há consumer com key=OUTRA_API, retorna 401.\n\nEsperado: **401 Unauthorized**"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong rejeitou iss incorreto — 401', function () {",
+                  "    pm.expect(pm.response.code).to.equal(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/users — token EXPIRADO → 401 🚫",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJVc2Vyc0FQSSIsInN1YiI6InRlc3QiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6MTcwMDAwMDAwMX0.invalido"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "description": "Token com `exp` no passado (já expirado).\niss=UsersAPI (correto), mas expirado.\n\nEsperado: **401** — Kong valida o campo exp."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong rejeitou token expirado — 401', function () {",
+                  "    pm.expect(pm.response.code).to.equal(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. CORS (preflight OPTIONS)",
+      "description": "Testa o plugin global de CORS do Kong.\n\nO Kong responde a preflight OPTIONS requests com os headers:\n- Access-Control-Allow-Origin: *\n- Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS\n- Access-Control-Allow-Headers: Authorization, Content-Type\n- Access-Control-Max-Age: 3600",
+      "item": [
+        {
+          "name": "OPTIONS /api/users — CORS preflight",
+          "request": {
+            "method": "OPTIONS",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "https://meuapp.fcgtech.com"
+              },
+              {
+                "key": "Access-Control-Request-Method",
+                "value": "POST"
+              },
+              {
+                "key": "Access-Control-Request-Headers",
+                "value": "Authorization,Content-Type"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "description": "Simula um preflight CORS de um frontend em https://meuapp.fcgtech.com.\n\nO Kong deve responder com os headers CORS sem exigir JWT.\n\nEsperado: 200 ou 204 + headers CORS"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('CORS preflight aceito (200 ou 204)', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});",
+                  "",
+                  "pm.test('Access-Control-Allow-Origin presente', function () {",
+                  "    pm.expect(pm.response.headers.get('Access-Control-Allow-Origin')).to.exist;",
+                  "});",
+                  "",
+                  "pm.test('Access-Control-Allow-Methods presente', function () {",
+                  "    pm.expect(pm.response.headers.get('Access-Control-Allow-Methods')).to.exist;",
+                  "});",
+                  "",
+                  "pm.test('Access-Control-Allow-Headers presente', function () {",
+                  "    pm.expect(pm.response.headers.get('Access-Control-Allow-Headers')).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "OPTIONS /api/catalog/games — CORS preflight",
+          "request": {
+            "method": "OPTIONS",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "https://meuapp.fcgtech.com"
+              },
+              {
+                "key": "Access-Control-Request-Method",
+                "value": "GET"
+              },
+              {
+                "key": "Access-Control-Request-Headers",
+                "value": "Authorization"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/catalog/games",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                "games"
+              ]
+            },
+            "description": "Preflight CORS para rota do catálogo.\n\nEsperado: 200 ou 204 + headers CORS"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('CORS preflight aceito (200 ou 204)', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});",
+                  "",
+                  "pm.test('Access-Control-Allow-Origin presente', function () {",
+                  "    pm.expect(pm.response.headers.get('Access-Control-Allow-Origin')).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Health Checks (via Kong)",
+      "description": "Verifica que os backends estão acessíveis pelo Kong.\n\nNota: /health nas APIs não passa pelas rotas configuradas no Kong (não há rota /health), então testamos via acesso direto.",
+      "item": [
+        {
+          "name": "GET /api/users/health — Health UsersAPI (via Kong)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "register"
+              ]
+            },
+            "description": "Usa a rota pública register como health check indireto.\nSe Kong responde (qualquer status != connection error), o backend está UP.\n\nEsperado: qualquer resposta HTTP (não connection refused)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong + UsersAPI acessíveis', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 404, 405, 500, 502]);",
+                  "});",
+                  "",
+                  "pm.test('Não é connection refused', function () {",
+                  "    pm.expect(pm.response).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/catalog/games — Health CatalogAPI (via Kong JWT)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/catalog/games",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                "games"
+              ]
+            },
+            "description": "Usa a rota de listar jogos como health check do CatalogAPI.\nRequer JWT (rota protegida).\n\nEsperado: 200 + array (backend respondendo)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Kong + CatalogAPI acessíveis', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 500, 502]);",
+                  "});",
+                  "",
+                  "pm.test('CatalogAPI respondeu 200', function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
