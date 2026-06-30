@@ -25,9 +25,9 @@ jobs:
         run: dotnet build Orchestrator.sln --configuration Release --no-restore
       
       - name: Run Unit Tests
-        run: dotnet test Orchestrator.sln --configuration Release --no-build --verbosity normal --filter "Category=UnitTests"
+        run: dotnet test tests/UnitTests --configuration Release --no-build --verbosity normal
         continue-on-error: true
       
       - name: Run Integration Tests
-        run: dotnet test Orchestrator.sln --configuration Release --no-build --verbosity normal --filter "Category=IntegrationTests"
+        run: dotnet test tests/IntegrationTests --configuration Release --no-build --verbosity normal
         continue-on-error: true
