@@ -1,0 +1,8 @@
+#Comando Kong
+
+kubectl port-forward svc/kong-proxy 9080:80 -n fcg-tech-fase-2
+
+
+#Comando redis
+kubectl port-forward svc/redis 6379:6379 -n fcg-tech-fase-2 
+

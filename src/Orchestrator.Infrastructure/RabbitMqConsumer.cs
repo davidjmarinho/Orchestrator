@@ -23,6 +23,15 @@ public class RabbitMqConsumer : BackgroundService
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     }
 
+    // MassTransit publishes events to fanout exchanges.
+    // The Orchestrator queues must be bound to those exchanges to receive the messages.
+    private static readonly Dictionary<string, string> QueueToExchangeMap = new()
+    {
+        ["user-created"] = "Contracts.IntegrationEvents:UserCreatedEventV1",
+        ["order-placed"] = "payments.order-placed",
+        ["payment-processed"] = "catalog.payment-processed"
+    };
+
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var factory = new ConnectionFactory()
@@ -45,6 +54,14 @@ public class RabbitMqConsumer : BackgroundService
     private void Consume<T>(string queue)
     {
         _channel?.QueueDeclare(queue, durable: true, exclusive: false, autoDelete: false, arguments: null);
+
+        // Bind to MassTransit fanout exchange so messages actually reach this queue
+        if (QueueToExchangeMap.TryGetValue(queue, out var exchange))
+        {
+            _channel?.ExchangeDeclare(exchange, ExchangeType.Fanout, durable: true);
+            _channel?.QueueBind(queue, exchange, routingKey: "");
+            Console.WriteLine($"[Orchestrator] 🔗 Queue '{queue}' bound to exchange '{exchange}'");
+        }
 
         var consumer = new EventingBasicConsumer(_channel);
         consumer.Received += async (model, ea) =>
