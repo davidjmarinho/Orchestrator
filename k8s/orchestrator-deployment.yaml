@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: orchestrator
-  namespace: fcg-tech-fase-2
+  namespace: fcg-tech-fase-4
 spec:
   replicas: 1
   selector:
@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: orchestrator
-        image: davidjmarinho/orchestrator:v5
+        image: 159924930744.dkr.ecr.us-east-1.amazonaws.com/orchestrator:v1
         imagePullPolicy: Never
         env:
         - name: RABBITMQ_HOST

@@ -48,7 +48,9 @@ project.lock.json
 # ═══════════════════════════════════════════
 #  Secrets / Credenciais
 # ═══════════════════════════════════════════
+k8s/secrets/secrets.yaml
 .env
+.env.*
 *.env.local
 MONGODB-CREDENTIALS.md
 
