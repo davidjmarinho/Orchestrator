@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: rabbitmq
-  namespace: fcg-tech-fase-2
+  namespace: fcg-tech-fase-4
   labels:
     app: rabbitmq
 spec:
@@ -28,12 +28,15 @@ spec:
           valueFrom:
             secretKeyRef:
               name: rabbitmq-secret
-              key: RABBITMQ_DEFAULT_USER
+              key: username
         - name: RABBITMQ_DEFAULT_PASS
           valueFrom:
             secretKeyRef:
               name: rabbitmq-secret
-              key: RABBITMQ_DEFAULT_PASS
+              key: password
+        volumeMounts:
+        - name: rabbitmq-storage
+          mountPath: /var/lib/rabbitmq
         resources:
           requests:
             memory: "256Mi"
@@ -57,13 +60,17 @@ spec:
           initialDelaySeconds: 20
           periodSeconds: 10
           timeoutSeconds: 5
+      volumes:
+      - name: rabbitmq-storage
+        persistentVolumeClaim:
+          claimName: rabbitmq-pvc
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: rabbitmq
-  namespace: fcg-tech-fase-2
+  namespace: fcg-tech-fase-4
 spec:
   type: ClusterIP
   selector:
