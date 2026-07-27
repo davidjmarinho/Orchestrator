@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: users-api
-  namespace: fcg-tech-fase-2
+  namespace: fcg-tech-fase-4
   labels:
     app: users-api
 spec:
@@ -24,15 +24,25 @@ spec:
         command: ['sh', '-c', 'echo "Aguardando RabbitMQ..."; until nc -z rabbitmq 5672; do echo "RabbitMQ indisponível - aguardando..."; sleep 3; done; echo "RabbitMQ está pronto!"']
       containers:
       - name: users-api
-        image: davidjmarinho/users-api:v2
+        image: 159924930744.dkr.ecr.us-east-1.amazonaws.com/usersapi:v1
         imagePullPolicy: Always
         ports:
         - containerPort: 80
           name: http
         env:
         # Override ConnectionStrings.DefaultConnection from appsettings.json
+        - name: POSTGRES_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: users-username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: users-password
         - name: ConnectionStrings__DefaultConnection
-          value: "Host=postgres;Port=5432;Database=fcg_users_db;Username=fcg;Password=fcgpw"
+          value: "Host=postgres;Port=5432;Database=fcg_users_db;Username=$(POSTGRES_USERNAME);Password=$(POSTGRES_PASSWORD)"
         # Override RabbitMq config from appsettings.json
         - name: RabbitMq__Host
           value: rabbitmq
@@ -76,7 +86,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: users-api
-  namespace: fcg-tech-fase-2
+  namespace: fcg-tech-fase-4
 spec:
   type: ClusterIP
   selector:

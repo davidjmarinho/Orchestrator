@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: catalog-api
-  namespace: fcg-tech-fase-2
+  namespace: fcg-tech-fase-4
   labels:
     app: catalog-api
 spec:
@@ -24,7 +24,7 @@ spec:
         command: ['sh', '-c', 'echo "Aguardando RabbitMQ..."; until nc -z rabbitmq 5672; do echo "RabbitMQ indisponível - aguardando..."; sleep 3; done; echo "RabbitMQ está pronto!"']
       containers:
       - name: catalog-api
-        image: davidjmarinho/catalog-api:v2
+        image: 159924930744.dkr.ecr.us-east-1.amazonaws.com/catalogapi:v1
         imagePullPolicy: Always
         ports:
         - containerPort: 80
@@ -89,7 +89,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: catalog-api
-  namespace: fcg-tech-fase-2
+  namespace: fcg-tech-fase-4
 spec:
   type: ClusterIP
   selector:

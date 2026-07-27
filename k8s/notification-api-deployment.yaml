@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: notification-api
-  namespace: fcg-tech-fase-2
+  namespace: fcg-tech-fase-4
   labels:
     app: notification-api
 spec:
@@ -24,7 +24,7 @@ spec:
         command: ['sh', '-c', 'echo "Aguardando RabbitMQ..."; until nc -z rabbitmq 5672; do echo "RabbitMQ indisponível - aguardando..."; sleep 3; done; echo "RabbitMQ está pronto!"']
       containers:
       - name: notification-api
-        image: davidjmarinho/notification-api:v1
+        image: 159924930744.dkr.ecr.us-east-1.amazonaws.com/notificationsapi:v1
         imagePullPolicy: Always
         ports:
         - containerPort: 80
@@ -54,7 +54,7 @@ spec:
           value: http://+:80
         resources:
           requests:
-            memory: "256Mi"
+            memory: "128Mi"
             cpu: "100m"
           limits:
             memory: "512Mi"
@@ -75,7 +75,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: notification-api
-  namespace: fcg-tech-fase-2
+  namespace: fcg-tech-fase-4
 spec:
   type: ClusterIP
   selector:
