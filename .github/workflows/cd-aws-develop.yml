@@ -1,0 +1,109 @@
+name: CD - AWS Develop
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  K8S_NAMESPACE: ${{ vars.K8S_NAMESPACE || 'fcg-tech-fase-4' }}
+  ECR_URI_NOTIFICATIONSAPI: 159924930744.dkr.ecr.us-east-1.amazonaws.com/notificationsapi
+  ECR_URI_ORCHESTRATOR: 159924930744.dkr.ecr.us-east-1.amazonaws.com/orchestrator
+  ECR_URI_PAYMENTSAPI: 159924930744.dkr.ecr.us-east-1.amazonaws.com/paymentsapi
+  ECR_URI_USERSAPI: 159924930744.dkr.ecr.us-east-1.amazonaws.com/usersapi
+  ECR_URI_CATALOGAPI: 159924930744.dkr.ecr.us-east-1.amazonaws.com/catalogapi
+
+concurrency:
+  group: cd-develop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore Orchestrator.sln
+
+      - name: Build
+        run: dotnet build Orchestrator.sln --configuration Release --no-restore
+
+      - name: Run unit tests (Application)
+        run: dotnet test tests/UnitTests/Application/Orchestrator.UnitTests.Application.csproj --configuration Release --no-build --verbosity normal
+
+      - name: Run unit tests (Infrastructure)
+        run: dotnet test tests/UnitTests/Infrastructure/Orchestrator.UnitTests.Infrastructure.csproj --configuration Release --no-build --verbosity normal
+
+      - name: Run integration tests
+        run: dotnet test tests/IntegrationTests/Orchestrator.IntegrationTests.csproj --configuration Release --no-build --verbosity normal
+
+  docker-push:
+    runs-on: ubuntu-latest
+    needs: validate
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build image metadata
+        id: meta
+        run: |
+          IMAGE_TAG=sha-${GITHUB_SHA::8}
+          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push orchestrator image
+        run: |
+          docker build -t "${ECR_URI_ORCHESTRATOR}:${{ steps.meta.outputs.image_tag }}" -t "${ECR_URI_ORCHESTRATOR}:develop-latest" .
+          docker push "${ECR_URI_ORCHESTRATOR}:${{ steps.meta.outputs.image_tag }}"
+          docker push "${ECR_URI_ORCHESTRATOR}:develop-latest"
+
+  deploy-eks:
+    runs-on: ubuntu-latest
+    needs: docker-push
+    environment: develop
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name "${{ vars.EKS_CLUSTER_NAME }}" --region "${AWS_REGION}"
+
+      - name: Rollout orchestrator
+        run: |
+          kubectl set image deployment/orchestrator orchestrator="${ECR_URI_ORCHESTRATOR}:${{ needs.docker-push.outputs.image_tag }}" -n "${K8S_NAMESPACE}"
+          kubectl rollout status deployment/orchestrator -n "${K8S_NAMESPACE}" --timeout=180s
+
+      - name: Deployment summary
+        run: |
+          echo "Deployed image: ${ECR_URI_ORCHESTRATOR}:${{ needs.docker-push.outputs.image_tag }}"
+          echo "Namespace: ${K8S_NAMESPACE}"
+          echo "Cluster: ${{ vars.EKS_CLUSTER_NAME }}"
