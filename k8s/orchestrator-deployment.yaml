@@ -16,7 +16,7 @@ spec:
       containers:
       - name: orchestrator
         image: 159924930744.dkr.ecr.us-east-1.amazonaws.com/orchestrator:v1
-        imagePullPolicy: Never
+        imagePullPolicy: Always
         env:
         - name: RABBITMQ_HOST
           value: rabbitmq

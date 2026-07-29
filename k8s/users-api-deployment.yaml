@@ -46,6 +46,18 @@ spec:
         # Override RabbitMq config from appsettings.json
         - name: RabbitMq__Host
           value: rabbitmq
+        - name: RabbitMq__Username
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-secret
+              key: username
+
+        - name: RabbitMq__Password
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-secret
+              key: password
+
         # Application Configuration
         - name: ASPNETCORE_ENVIRONMENT
           value: Production
