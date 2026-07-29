@@ -19,6 +19,8 @@ fi
 REPO_SLUG="${1:-}"
 ROLE_NAME="${2:-GitHubActionsDeployRole}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
+EKS_CLUSTER_NAME="${EKS_CLUSTER_NAME:-fiap-games-eks}"
+K8S_NAMESPACE="${K8S_NAMESPACE:-fcg-tech-fase-4}"
 OIDC_PROVIDER_URL="https://token.actions.githubusercontent.com"
 OIDC_THUMBPRINT="${OIDC_THUMBPRINT:-}"
 
@@ -92,6 +94,8 @@ cat > "$TMP_DIR/trust-policy.json" <<EOF_TRUST
         "StringLike": {
           "token.actions.githubusercontent.com:sub": [
             "repo:${REPO_SLUG}:ref:refs/heads/develop",
+            "repo:${REPO_SLUG}:ref:refs/heads/main",
+            "repo:${REPO_SLUG}:environment:develop",
             "repo:${REPO_SLUG}:environment:prod",
             "repo:${REPO_SLUG}:ref:refs/tags/v*"
           ]
@@ -125,7 +129,12 @@ cat > "$TMP_DIR/deploy-policy.json" <<'EOF_POLICY'
       "Sid": "EksAccess",
       "Effect": "Allow",
       "Action": [
-        "eks:DescribeCluster"
+        "eks:AssociateAccessPolicy",
+        "eks:CreateAccessEntry",
+        "eks:DescribeAccessEntry",
+        "eks:DescribeCluster",
+        "eks:ListAccessEntries",
+        "eks:ListAssociatedAccessPolicies"
       ],
       "Resource": "*"
     }
@@ -151,6 +160,22 @@ aws iam put-role-policy \
   --role-name "$ROLE_NAME" \
   --policy-name GitHubActionsDeployPolicy \
   --policy-document "file://$TMP_DIR/deploy-policy.json" >/dev/null
+
+if aws eks describe-cluster --name "$EKS_CLUSTER_NAME" --region "$REGION" >/dev/null 2>&1; then
+  echo "Ensuring EKS access entry exists for ${ROLE_ARN}..."
+  aws eks create-access-entry \
+    --cluster-name "$EKS_CLUSTER_NAME" \
+    --principal-arn "$ROLE_ARN" \
+    --region "$REGION" >/dev/null 2>&1 || true
+
+  echo "Ensuring EKS edit policy is associated for namespace ${K8S_NAMESPACE}..."
+  aws eks associate-access-policy \
+    --cluster-name "$EKS_CLUSTER_NAME" \
+    --principal-arn "$ROLE_ARN" \
+    --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSEditPolicy \
+    --access-scope "type=namespace,namespaces=${K8S_NAMESPACE}" \
+    --region "$REGION" >/dev/null 2>&1 || true
+fi
 
 cat <<EOF
 
