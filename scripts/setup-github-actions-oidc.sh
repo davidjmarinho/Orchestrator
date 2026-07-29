@@ -92,6 +92,8 @@ cat > "$TMP_DIR/trust-policy.json" <<EOF_TRUST
         "StringLike": {
           "token.actions.githubusercontent.com:sub": [
             "repo:${REPO_SLUG}:ref:refs/heads/develop",
+            "repo:${REPO_SLUG}:ref:refs/heads/main",
+            "repo:${REPO_SLUG}:environment:develop",
             "repo:${REPO_SLUG}:environment:prod",
             "repo:${REPO_SLUG}:ref:refs/tags/v*"
           ]
