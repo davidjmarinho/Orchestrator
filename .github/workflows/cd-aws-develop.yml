@@ -12,7 +12,9 @@ permissions:
 
 env:
   AWS_REGION: us-east-1
+  EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME || 'fiap-games-eks' }}
   K8S_NAMESPACE: ${{ vars.K8S_NAMESPACE || 'fcg-tech-fase-4' }}
+  AWS_ROLE_TO_ASSUME: ${{ vars.AWS_ROLE_TO_ASSUME || secrets.AWS_ROLE_TO_ASSUME || 'arn:aws:iam::159924930744:role/GitHubActionsDeployRole' }}
   ECR_URI_NOTIFICATIONSAPI: 159924930744.dkr.ecr.us-east-1.amazonaws.com/notificationsapi
   ECR_URI_ORCHESTRATOR: 159924930744.dkr.ecr.us-east-1.amazonaws.com/orchestrator
   ECR_URI_PAYMENTSAPI: 159924930744.dkr.ecr.us-east-1.amazonaws.com/paymentsapi
@@ -65,7 +67,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
@@ -92,10 +94,10 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
 
       - name: Update kubeconfig
-        run: aws eks update-kubeconfig --name "${{ vars.EKS_CLUSTER_NAME }}" --region "${AWS_REGION}"
+        run: aws eks update-kubeconfig --name "${EKS_CLUSTER_NAME}" --region "${AWS_REGION}"
 
       - name: Rollout orchestrator
         run: |
@@ -106,4 +108,4 @@ jobs:
         run: |
           echo "Deployed image: ${ECR_URI_ORCHESTRATOR}:${{ needs.docker-push.outputs.image_tag }}"
           echo "Namespace: ${K8S_NAMESPACE}"
-          echo "Cluster: ${{ vars.EKS_CLUSTER_NAME }}"
+          echo "Cluster: ${EKS_CLUSTER_NAME}"
