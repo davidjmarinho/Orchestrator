@@ -129,7 +129,12 @@ cat > "$TMP_DIR/deploy-policy.json" <<'EOF_POLICY'
       "Sid": "EksAccess",
       "Effect": "Allow",
       "Action": [
-        "eks:DescribeCluster"
+        "eks:AssociateAccessPolicy",
+        "eks:CreateAccessEntry",
+        "eks:DescribeAccessEntry",
+        "eks:DescribeCluster",
+        "eks:ListAccessEntries",
+        "eks:ListAssociatedAccessPolicies"
       ],
       "Resource": "*"
     }

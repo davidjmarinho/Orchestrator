@@ -96,6 +96,20 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
 
+      - name: Ensure EKS access for deploy role
+        run: |
+          aws eks create-access-entry \
+            --cluster-name "${EKS_CLUSTER_NAME}" \
+            --principal-arn "${AWS_ROLE_TO_ASSUME}" \
+            --region "${AWS_REGION}" || true
+
+          aws eks associate-access-policy \
+            --cluster-name "${EKS_CLUSTER_NAME}" \
+            --principal-arn "${AWS_ROLE_TO_ASSUME}" \
+            --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSEditPolicy \
+            --access-scope "type=namespace,namespaces=${K8S_NAMESPACE}" \
+            --region "${AWS_REGION}" || true
+
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --name "${EKS_CLUSTER_NAME}" --region "${AWS_REGION}"
 
