@@ -1,0 +1,50 @@
+name: CI - PR Develop
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-pr-develop-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore Orchestrator.sln
+
+      - name: Build
+        run: dotnet build Orchestrator.sln --configuration Release --no-restore
+
+      - name: Run unit tests (Application)
+        run: dotnet test tests/UnitTests/Application/Orchestrator.UnitTests.Application.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=unit-application.trx"
+
+      - name: Run unit tests (Infrastructure)
+        run: dotnet test tests/UnitTests/Infrastructure/Orchestrator.UnitTests.Infrastructure.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=unit-infrastructure.trx"
+
+      - name: Run integration tests
+        run: dotnet test tests/IntegrationTests/Orchestrator.IntegrationTests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=integration.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-trx
+          path: |
+            **/*.trx
+          if-no-files-found: ignore
