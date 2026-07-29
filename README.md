@@ -2,8 +2,8 @@
 
 Orquestrador de eventos que coordena a comunicação entre microserviços via **RabbitMQ**, registrando tudo no **MongoDB**. Inclui **Kong API Gateway** (JWT), **Redis Cache**, **Prometheus** e **Grafana** para observabilidade completa.
 
-## 🆕 Novas features
-
+## 🆕 Novas features adicionadas
+ 
 - CI com GitHub Actions para PRs na branch `develop`.
 - CD para AWS com OIDC, publicando imagem no ECR e fazendo rollout no EKS.
 - Deploy de produção por tag `v*` ou `workflow_dispatch`, com aprovação manual no environment `prod`.
